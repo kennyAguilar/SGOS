@@ -1,0 +1,6 @@
+flask>=3.0.3
+flask-cors>=4.0.1
+pg8000>=1.31.5
+PyJWT>=2.9.0
+python-dotenv>=1.0.1
+openpyxl>=3.1.5

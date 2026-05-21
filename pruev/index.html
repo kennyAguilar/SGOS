@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SGOS Reportes - Demo Design System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell" data-filter-open="true">
+    <header class="topbar">
+      <div class="brand-block" aria-label="SGOS Reportes">
+        <span class="brand-mark">S</span>
+        <div>
+          <p class="eyebrow">Mesa operativa</p>
+          <h1>SGOS Reportes</h1>
+        </div>
+      </div>
+
+      <nav class="report-tabs" aria-label="Vistas de reporte">
+        <button class="tab-button active" type="button">Cuadratura</button>
+        <button class="tab-button" type="button">Maquinas</button>
+        <button class="tab-button" type="button">Salas</button>
+      </nav>
+
+      <div class="topbar-actions">
+        <button class="icon-button" id="toggleFilters" type="button" aria-label="Alternar filtros" title="Alternar filtros">
+          <span class="icon-lines" aria-hidden="true"></span>
+        </button>
+        <button class="ghost-button" id="loadDemo" type="button">Procesar</button>
+        <button class="export-button" id="exportCsv" type="button">Exportar a Excel</button>
+      </div>
+    </header>
+
+    <aside class="filter-panel" aria-label="Filtros de reporte">
+      <div class="panel-heading">
+        <p class="eyebrow">Filtros</p>
+        <strong>Reporte general</strong>
+      </div>
+
+      <label class="field-label" for="dateRange">Periodo</label>
+      <select id="dateRange" class="field-control">
+        <option value="today">Hoy</option>
+        <option value="week" selected>Semana actual</option>
+        <option value="month">Mes actual</option>
+      </select>
+
+      <label class="field-label" for="roomFilter">Sala</label>
+      <select id="roomFilter" class="field-control">
+        <option value="all">Todas las salas</option>
+        <option value="Norte">Sala Norte</option>
+        <option value="Centro">Sala Centro</option>
+        <option value="Sur">Sala Sur</option>
+      </select>
+
+      <label class="field-label" for="statusFilter">Estado QA</label>
+      <select id="statusFilter" class="field-control">
+        <option value="all">Todos</option>
+        <option value="ok">Coincidencia exacta</option>
+        <option value="warn">Diferencia menor a 1%</option>
+        <option value="error">Diferencia mayor a 1%</option>
+      </select>
+
+      <div class="toggle-row">
+        <span>Solo diferencias</span>
+        <label class="switch" aria-label="Solo diferencias">
+          <input type="checkbox" id="diffOnly">
+          <span></span>
+        </label>
+      </div>
+
+      <div class="filter-meta">
+        <span>Ultima carga</span>
+        <strong>06 May 2026, 09:45</strong>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="status-strip" aria-label="Indicadores clave">
+        <article class="metric-card">
+          <span>Total SRW</span>
+          <strong class="mono">$128,540.75</strong>
+          <small>+4.2% vs ayer</small>
+        </article>
+        <article class="metric-card">
+          <span>Total SGOS</span>
+          <strong class="mono">$128,177.40</strong>
+          <small>Revision de 18 cortes</small>
+        </article>
+        <article class="metric-card metric-warning">
+          <span>Diferencia neta</span>
+          <strong class="mono">$363.35</strong>
+          <small>2 cortes requieren atencion</small>
+        </article>
+        <article class="metric-card metric-success">
+          <span>Cuadratura</span>
+          <strong class="mono">98.7%</strong>
+          <small>Objetivo operativo 99%</small>
+        </article>
+      </section>
+
+      <section class="analysis-band" aria-label="Resumen visual">
+        <div class="chart-panel">
+          <div class="section-title">
+            <p class="eyebrow">Tendencia</p>
+            <h2>Comparativo por sala</h2>
+          </div>
+          <div class="bar-chart" aria-label="Grafico comparativo SRW vs SGOS">
+            <div class="bar-row">
+              <span>Norte</span>
+              <div class="bar-track"><i style="width: 93%"></i><b style="width: 91%"></b></div>
+              <strong class="mono">0.23%</strong>
+            </div>
+            <div class="bar-row">
+              <span>Centro</span>
+              <div class="bar-track"><i style="width: 88%"></i><b style="width: 86%"></b></div>
+              <strong class="mono warn-text">0.72%</strong>
+            </div>
+            <div class="bar-row">
+              <span>Sur</span>
+              <div class="bar-track"><i style="width: 76%"></i><b style="width: 68%"></b></div>
+              <strong class="mono error-text">1.84%</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="qa-panel">
+          <div class="section-title">
+            <p class="eyebrow">QA</p>
+            <h2>Reglas activas</h2>
+          </div>
+          <div class="rule-list">
+            <span><i class="dot success"></i> Coincidencia exacta</span>
+            <span><i class="dot warning"></i> Diferencia menor a 1%</span>
+            <span><i class="dot danger"></i> Diferencia mayor a 1%</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-shell" aria-label="Cuadratura SRW contra SGOS">
+        <div class="table-toolbar">
+          <div class="section-title">
+            <p class="eyebrow">Data grid</p>
+            <h2>Cuadratura SRW vs SGOS</h2>
+          </div>
+          <div class="legend">
+            <span><i class="dot success"></i> OK</span>
+            <span><i class="dot warning"></i> Atencion</span>
+            <span><i class="dot danger"></i> Critico</span>
+          </div>
+        </div>
+
+        <div class="skeleton-table" id="skeletonTable" hidden aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+
+        <div class="data-grid-wrap" id="gridWrap">
+          <table class="data-grid">
+            <thead>
+              <tr>
+                <th>Sala</th>
+                <th>Maquina</th>
+                <th>Fecha corte</th>
+                <th class="numeric">SRW</th>
+                <th class="numeric">SGOS</th>
+                <th class="numeric">Dif.</th>
+                <th>QA</th>
+              </tr>
+            </thead>
+            <tbody id="reportRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

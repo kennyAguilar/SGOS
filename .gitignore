@@ -1,0 +1,16 @@
+# Entorno Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# ⚠️ Credenciales reales – NUNCA subir a Git
+.env
+
+# Logs
+*.log
+
+# Node (carpeta backend anterior)
+backend/node_modules/

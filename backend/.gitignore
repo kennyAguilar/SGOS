@@ -1,0 +1,9 @@
+# Dependencias
+node_modules/
+
+# ⚠️ NUNCA subir a Git - contiene credenciales reales
+.env
+
+# Logs
+*.log
+npm-debug.log*

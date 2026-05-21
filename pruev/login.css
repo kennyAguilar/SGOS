@@ -1,0 +1,407 @@
+/* ── SGOS Reportes – Estilos de la página de login ──────────────────
+   Sigue el Design System "Deep Slate" definido en el documento oficial.
+   Variables de color y tipografía consistentes con styles.css
+──────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: dark;
+  --bg:           #0d1117;
+  --surface:      #161b22;
+  --surface-raised:#1f242c;
+  --border:       #30363d;
+  --text:         #c9d1d9;
+  --muted:        #8b949e;
+  --accent:       #58a6ff;
+  --accent-hover: #79b8ff;
+  --success:      #238636;
+  --danger:       #f85149;
+  --danger-soft:  rgba(248, 81, 73, 0.12);
+  --radius:       8px;
+  --ui-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Shell principal: dos columnas ──────────────────────────────── */
+.login-shell {
+  display: grid;
+  grid-template-columns: 1fr 480px;
+  min-height: 100vh;
+}
+
+/* ── Columna izquierda ───────────────────────────────────────────── */
+.login-left {
+  display: flex;
+  flex-direction: column;
+  padding: 48px 72px;
+  background: linear-gradient(160deg, #0d1117 0%, #080c11 100%);
+}
+
+/* Logo / marca */
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: auto;
+}
+
+.brand-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: var(--radius);
+  border: 1px solid rgba(88, 166, 255, 0.45);
+  background: linear-gradient(135deg, #0d419d 0%, #238636 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.brand-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* Contenido héroe */
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  max-width: 520px;
+}
+
+.hero-title {
+  margin: 0 0 20px;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: #e6edf3;
+}
+
+.hero-desc {
+  margin: 0 0 40px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 420px;
+}
+
+/* Lista de módulos */
+.feature-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.feature-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+
+.feature-item strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.feature-item span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ── Columna derecha ─────────────────────────────────────────────── */
+.login-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 40px;
+  background: rgba(22, 27, 34, 0.60);
+  border-left: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+}
+
+/* Tarjeta del formulario */
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #e6edf3;
+}
+
+.card-subtitle {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+
+/* Caja de ayuda */
+.help-box {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.help-box strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.help-box p {
+  margin: 0;
+}
+
+/* Formulario */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.field-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--ui-font);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field-input::placeholder {
+  color: var(--muted);
+}
+
+.field-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.18);
+}
+
+.field-input[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.16);
+}
+
+/* Campo contraseña con botón de visibilidad */
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .field-input {
+  padding-right: 44px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  transition: color 0.15s;
+}
+
+.toggle-password:hover {
+  color: var(--text);
+}
+
+/* Banner de error */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(248, 81, 73, 0.45);
+  background: var(--danger-soft);
+  color: #ff7b72;
+  font-size: 0.84rem;
+  animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  60%       { transform: translateX(6px); }
+}
+
+/* Botón de ingresar */
+.submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 42px;
+  margin-top: 4px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--ui-font);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  box-shadow: 0 4px 18px rgba(88, 166, 255, 0.25);
+}
+
+.submit-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 6px 24px rgba(88, 166, 255, 0.35);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.submit-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Spinner de carga */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Footer de la tarjeta */
+.card-footer {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── Responsivo: pantallas pequeñas (<768 px) ────────────────────── */
+@media (max-width: 768px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .login-left {
+    padding: 32px 24px 24px;
+    background: var(--bg);
+  }
+
+  .hero-content {
+    padding-bottom: 8px;
+  }
+
+  .hero-title {
+    font-size: 1.6rem;
+  }
+
+  .feature-list {
+    gap: 14px;
+  }
+
+  .login-right {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 32px 24px 40px;
+    align-items: stretch;
+  }
+
+  .login-card {
+    max-width: 100%;
+  }
+}
