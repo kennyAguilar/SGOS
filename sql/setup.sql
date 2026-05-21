@@ -47,6 +47,20 @@ CREATE TABLE IF NOT EXISTS getnet_transacciones (
 
 CREATE INDEX IF NOT EXISTS idx_getnet_jornada ON getnet_transacciones (jornada DESC);
 
+-- Tabla de log de cargas de archivos
+CREATE TABLE IF NOT EXISTS upload_log (
+  id            BIGINT       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  tipo          VARCHAR(50)  NOT NULL,
+  archivo       TEXT         NOT NULL,
+  usuario       VARCHAR(100) NOT NULL,
+  rows_total    INT,
+  rows_inserted INT,
+  rows_skipped  INT,
+  uploaded_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_upload_log_uploaded ON upload_log (uploaded_at DESC);
+
 -- ──────────────────────────────────────────────────────────────────
 -- Para crear el primer usuario administrador ejecuta:
 --   python create_user.py

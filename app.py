@@ -168,6 +168,21 @@ def api_login():
     stored = row[2] if row else _DUMMY_HASH
     ok = check_password(password, stored)
 
+    # Registrar intento en audit log
+    try:
+        conn_a = _get_conn()
+        cur_a  = conn_a.cursor()
+        cur_a.execute(
+            "INSERT INTO login_audit (username, ip_address, success) VALUES (%s, %s, %s)",
+            (username, request.remote_addr, bool(row and ok)),
+        )
+        conn_a.commit()
+        cur_a.close()
+    except Exception as exc:
+        app.logger.warning("login_audit insert falló: %s", exc)
+    finally:
+        _put_conn(conn_a)
+
     if not row or not ok:
         return jsonify({"error": "Usuario o contraseña incorrectos."}), 401
 
@@ -382,6 +397,30 @@ def api_upload(tipo: str):
     except Exception as exc:
         app.logger.error("Error procesando '%s' tipo '%s': %s", filename, tipo, exc)
         return jsonify({"error": "Error interno al procesar el archivo."}), 500
+
+    # Registrar carga en upload_log
+    try:
+        conn_l = _get_conn()
+        cur_l  = conn_l.cursor()
+        cur_l.execute(
+            """INSERT INTO upload_log
+                   (tipo, archivo, usuario, rows_total, rows_inserted, rows_skipped)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (
+                tipo,
+                filename,
+                request.current_user.get("username", "?"),
+                result["rows_total"],
+                result["rows_inserted"],
+                result["rows_skipped"],
+            ),
+        )
+        conn_l.commit()
+        cur_l.close()
+    except Exception as exc:
+        app.logger.warning("upload_log insert falló: %s", exc)
+    finally:
+        _put_conn(conn_l)
 
     return jsonify({**result, "archivo": filename})
 
