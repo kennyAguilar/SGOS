@@ -592,6 +592,8 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 .filter-btn:hover              { background: var(--cds-layer-02); color: var(--cds-text-primary); }
 .filter-btn--primary           { border-color: var(--cds-interactive); color: var(--cds-interactive); }
 .filter-btn--primary:hover     { background: rgba(212,175,55,.12); }
+.filter-btn--apply             { background: var(--cds-interactive); color: #000; font-weight: 600; border-color: var(--cds-interactive); display: flex; align-items: center; gap: 5px; flex: 1; justify-content: center; }
+.filter-btn--apply:hover       { filter: brightness(1.15); }
 
 /* ── Fila de totales ────────────────────────────────────────── */
 .totals-row td {

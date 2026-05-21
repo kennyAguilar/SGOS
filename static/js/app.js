@@ -448,15 +448,17 @@ document.getElementById("filtersNone").addEventListener("click", () => {
 });
 
 /* Eventos de filtros */
-[yearFilter, monthFilter, showTotals].forEach((el) => el.addEventListener("change", renderRows));
+const applyFilter = document.getElementById("applyFilter");
+[showTotals].forEach((el) => el.addEventListener("change", renderRows));
 nameFilter.addEventListener("input", renderRows);
-
-/* Recargar dashboard Getnet al cambiar año */
-yearFilter.addEventListener("change", () => {
+applyFilter.addEventListener("click", () => {
+  renderRows();
   if (document.querySelector(".header-tab.active")?.dataset.tab === "getnet") {
     loadGetnetDashboard();
   }
 });
+
+/* Recargar dashboard Getnet al cambiar año (via botón Aplicar, no aquí) */
 
 /* ── Tooltips ─────────────────────────────────────────────────── */
 document.addEventListener("mouseover", (e) => {
