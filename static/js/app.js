@@ -52,9 +52,10 @@ const currency = new Intl.NumberFormat("en-US", { style:"currency", currency:"US
 /* ── Referencias DOM ──────────────────────────────────────────── */
 const appShell    = document.querySelector(".app-layout");
 const rowsTarget  = document.querySelector("#reportRows");
-const roomFilter  = document.querySelector("#roomFilter");
-const statusFilter= document.querySelector("#statusFilter");
-const diffOnly    = document.querySelector("#diffOnly");
+const yearFilter  = document.querySelector("#yearFilter");
+const monthFilter = document.querySelector("#monthFilter");
+const nameFilter  = document.querySelector("#nameFilter");
+const showTotals  = document.querySelector("#showTotals");
 const tooltip     = document.querySelector("#tooltip");
 const skeleton    = document.querySelector("#skeletonTable");
 const gridWrap    = document.querySelector("#gridWrap");
@@ -128,11 +129,15 @@ function getStatus(row) {
 }
 
 function getFiltered() {
+  const yr   = yearFilter.value;
+  const mo   = monthFilter.value;
+  const name = nameFilter.value.trim().toLowerCase();
   return reportData.filter((row) => {
-    const s = getStatus(row);
-    return (roomFilter.value   === "all" || row.room === roomFilter.value)
-        && (statusFilter.value === "all" || s.key === statusFilter.value)
-        && (!diffOnly.checked  || s.key !== "ok");
+    const dateParts = row.date.split("-"); // ["2026","05","06 ..."
+    if (yr   && dateParts[0] !== yr)                   return false;
+    if (mo   && parseInt(dateParts[1], 10) !== parseInt(mo, 10)) return false;
+    if (name && !(row.room + " " + row.machine).toLowerCase().includes(name)) return false;
+    return true;
   });
 }
 
@@ -141,6 +146,8 @@ function renderRows() {
   const rows = getFiltered();
   if (!rows.length) {
     rowsTarget.innerHTML = `<tr><td colspan="7" class="empty-state">No hay cortes que coincidan con los filtros.</td></tr>`;
+    const f = rowsTarget.closest("table").querySelector("tfoot");
+    if (f) f.remove();
     return;
   }
   rowsTarget.innerHTML = rows.map((row) => {
@@ -160,6 +167,28 @@ function renderRows() {
         <td><span class="pill ${s.className}"><i class="dot ${s.key === "ok" ? "success" : s.key === "warn" ? "warning" : "danger"}"></i>${s.label}</span></td>
       </tr>`;
   }).join("");
+
+  // ── Fila de totales ──────────────────────────────────────
+  const table    = rowsTarget.closest("table");
+  const oldFoot  = table.querySelector("tfoot");
+  if (oldFoot) oldFoot.remove();
+
+  if (showTotals && showTotals.checked) {
+    const sumSrw  = rows.reduce((a, r) => a + r.srw,  0);
+    const sumSgos = rows.reduce((a, r) => a + r.sgos, 0);
+    const sumDiff = sumSrw - sumSgos;
+    const diffCls = sumDiff === 0 ? "success-text" : Math.abs(sumDiff / sumSrw) * 100 < 1 ? "warn-text" : "error-text";
+    const tfoot   = document.createElement("tfoot");
+    tfoot.innerHTML = `
+      <tr class="totals-row">
+        <td colspan="3">Total (${rows.length} registros)</td>
+        <td class="numeric">${currency.format(sumSrw)}</td>
+        <td class="numeric">${currency.format(sumSgos)}</td>
+        <td class="numeric ${diffCls}">${currency.format(sumDiff)}</td>
+        <td></td>
+      </tr>`;
+    table.appendChild(tfoot);
+  }
 }
 
 /* ── Skeleton loader ──────────────────────────────────────────── */
@@ -269,7 +298,21 @@ uploadConfirm.addEventListener("click", async () => {
 document.getElementById("loadDemo").addEventListener("click", openUploadModal);
 document.getElementById("exportCsv").addEventListener("click", exportCsv);
 
-[roomFilter, statusFilter, diffOnly].forEach((el) => el.addEventListener("change", renderRows));
+/* Botones Todos / Ninguno */
+document.getElementById("filtersAll").addEventListener("click", () => {
+  yearFilter.value  = "2025";
+  monthFilter.value = "";
+  nameFilter.value  = "";
+  renderRows();
+});
+document.getElementById("filtersNone").addEventListener("click", () => {
+  nameFilter.value = "";
+  renderRows();
+});
+
+/* Eventos de filtros */
+[yearFilter, monthFilter, showTotals].forEach((el) => el.addEventListener("change", renderRows));
+nameFilter.addEventListener("input", renderRows);
 
 /* ── Tooltips ─────────────────────────────────────────────────── */
 document.addEventListener("mouseover", (e) => {

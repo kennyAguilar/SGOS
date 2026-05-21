@@ -57,36 +57,56 @@
   <div class="app-layout" data-nav-open="true">
 
     <aside class="cds--side-nav" aria-label="Filtros de reporte">
+
+      <!-- ── Sección Filtros ──────────────────────────────── -->
       <div class="nav-section-label">Filtros</div>
       <div style="padding: 0 16px;">
 
-        <label class="field-label" for="dateRange">Periodo</label>
-        <select id="dateRange" class="field-control">
-          <option value="today">Hoy</option>
-          <option value="week" selected>Semana actual</option>
-          <option value="month">Mes actual</option>
+        <label class="field-label" for="yearFilter">Año</label>
+        <select id="yearFilter" class="field-control">
+          <option value="">Todos</option>
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
         </select>
 
-        <label class="field-label" for="roomFilter">Sala</label>
-        <select id="roomFilter" class="field-control">
-          <option value="all">Todas las salas</option>
-          <option value="Norte">Sala Norte</option>
-          <option value="Centro">Sala Centro</option>
-          <option value="Sur">Sala Sur</option>
+        <label class="field-label" for="monthFilter">Mes</label>
+        <select id="monthFilter" class="field-control">
+          <option value="">Todos</option>
+          <option value="1">Enero</option>
+          <option value="2">Febrero</option>
+          <option value="3">Marzo</option>
+          <option value="4">Abril</option>
+          <option value="5">Mayo</option>
+          <option value="6">Junio</option>
+          <option value="7">Julio</option>
+          <option value="8">Agosto</option>
+          <option value="9">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
         </select>
 
-        <label class="field-label" for="statusFilter">Estado QA</label>
-        <select id="statusFilter" class="field-control">
-          <option value="all">Todos</option>
-          <option value="ok">Coincidencia exacta</option>
-          <option value="warn">Diferencia menor a 1%</option>
-          <option value="error">Diferencia mayor a 1%</option>
-        </select>
+        <label class="field-label" for="nameFilter">Nombre</label>
+        <input type="search" id="nameFilter" class="field-input"
+               placeholder="Asistente o cliente…" autocomplete="off">
+
+        <div class="filter-actions">
+          <button class="filter-btn filter-btn--primary" id="filtersAll" type="button">Todos</button>
+          <button class="filter-btn" id="filtersNone" type="button">Ninguno</button>
+        </div>
+
+      </div>
+
+      <!-- ── Sección Vista ───────────────────────────────── -->
+      <div class="nav-section-label" style="margin-top: var(--cds-spacing-06)">Vista</div>
+      <div style="padding: 0 16px;">
 
         <div class="toggle-row">
-          <span>Solo diferencias</span>
-          <label class="switch" aria-label="Solo diferencias">
-            <input type="checkbox" id="diffOnly">
+          <span>Filas totales</span>
+          <label class="switch" aria-label="Filas totales">
+            <input type="checkbox" id="showTotals">
             <span></span>
           </label>
         </div>

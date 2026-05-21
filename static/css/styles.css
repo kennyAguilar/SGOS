@@ -547,6 +547,55 @@ button:focus-visible,input:focus-visible,select:focus-visible {
   background: var(--cds-layer-01);
 }
 
+/* ── Campo de búsqueda (texto libre) ───────────────────────── */
+.field-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--cds-spacing-03);
+  background: var(--cds-layer-02);
+  border: none;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  color: var(--cds-text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+.field-input:focus          { border-bottom-color: var(--cds-interactive); }
+.field-input::placeholder   { color: var(--cds-text-helper); }
+
+/* ── Botones Todos / Ninguno ────────────────────────────────── */
+.filter-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--cds-spacing-03);
+  padding-top: var(--cds-spacing-05);
+}
+
+.filter-btn {
+  height: 32px;
+  border: 1px solid var(--cds-border-subtle);
+  background: transparent;
+  color: var(--cds-text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.filter-btn:hover              { background: var(--cds-layer-02); color: var(--cds-text-primary); }
+.filter-btn--primary           { border-color: var(--cds-interactive); color: var(--cds-interactive); }
+.filter-btn--primary:hover     { background: rgba(212,175,55,.12); }
+
+/* ── Fila de totales ────────────────────────────────────────── */
+.totals-row td {
+  background: var(--cds-layer-02);
+  border-top: 2px solid var(--cds-interactive);
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  padding: var(--cds-spacing-03) var(--cds-spacing-04);
+  font-size: 13px;
+}
+.totals-row .numeric { color: var(--cds-interactive); }
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .cds--side-nav { display: none; }
