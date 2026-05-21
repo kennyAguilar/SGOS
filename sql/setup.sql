@@ -28,6 +28,25 @@ CREATE TABLE IF NOT EXISTS login_audit (
 
 CREATE INDEX IF NOT EXISTS idx_audit_user ON login_audit (username, attempted_at DESC);
 
+-- Tabla de transacciones Getnet
+CREATE TABLE IF NOT EXISTS getnet_transacciones (
+    id             BIGINT       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    jornada        DATE         NOT NULL,
+    fecha          TIMESTAMP    NOT NULL,
+    id_cliente     TEXT         NOT NULL,
+    monto          NUMERIC(12,0) NOT NULL,
+    voucher        TEXT         NOT NULL,
+    slot_attendant TEXT,
+    validador      TEXT,
+    forma_pago     TEXT,
+    ingreso_cawa   TEXT,
+    operacion_uid  TEXT         NOT NULL UNIQUE,
+    archivo_origen TEXT,
+    created_at     TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_getnet_jornada ON getnet_transacciones (jornada DESC);
+
 -- ──────────────────────────────────────────────────────────────────
 -- Para crear el primer usuario administrador ejecuta:
 --   python create_user.py

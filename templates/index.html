@@ -21,9 +21,13 @@
     </span>
 
     <nav class="header-tabs" aria-label="Vistas de reporte">
-      <button class="header-tab active" type="button">Cuadratura</button>
-      <button class="header-tab" type="button">Maquinas</button>
-      <button class="header-tab" type="button">Salas</button>
+      <button class="header-tab active" type="button">Resumen</button>
+      <button class="header-tab" type="button">Getnet</button>
+      <button class="header-tab" type="button">Premios</button>
+      <button class="header-tab" type="button">Comps</button>
+      <button class="header-tab" type="button">Analisis general</button>
+      <button class="header-tab" type="button">Control</button>
+      <button class="header-tab" type="button">CoinIn Cero</button>
     </nav>
 
     <div class="header-actions">
@@ -37,7 +41,7 @@
         </svg>
         Filtros
       </button>
-      <button class="header-btn" id="loadDemo" type="button">Procesar</button>
+      <button class="header-btn" id="loadDemo" type="button">Cargar Excel</button>
       <button class="header-btn header-btn--primary" id="exportCsv" type="button">Exportar a Excel</button>
       <button class="header-btn header-btn--danger" id="logoutBtn" type="button" title="Cerrar sesión">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -202,33 +206,39 @@
   </div>
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
-  <script src="/static/js/app.js"></script>
-</body>
-</html>
-          <span></span><span></span><span></span><span></span>
-        </div>
 
-        <div class="data-grid-wrap" id="gridWrap">
-          <table class="data-grid">
-            <thead>
-              <tr>
-                <th>Sala</th>
-                <th>Maquina</th>
-                <th>Fecha corte</th>
-                <th class="numeric">SRW</th>
-                <th class="numeric">SGOS</th>
-                <th class="numeric">Dif.</th>
-                <th>QA</th>
-              </tr>
-            </thead>
-            <tbody id="reportRows"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+  <!-- ── Modal Cargar Excel ──────────────────────────────────── -->
+  <div class="cds--modal" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+    <div class="cds--modal-container">
+      <div class="cds--modal-header">
+        <h2 class="cds--modal-header__heading" id="uploadModalTitle">Cargar Excel</h2>
+        <button class="cds--modal-close" id="uploadModalClose" type="button" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="cds--modal-content">
+        <label class="field-label" for="uploadTipo">Tipo de archivo</label>
+        <select id="uploadTipo" class="field-control">
+          <option value="getnet">Getnet</option>
+          <option value="premios">Premios</option>
+          <option value="comps">Comps</option>
+          <option value="coinin_mda">CoinIn MDA</option>
+          <option value="coinin_mdj">CoinIn MDJ</option>
+          <option value="jefatura">Jefatura</option>
+        </select>
+        <label class="field-label" style="margin-top:var(--cds-spacing-05);" for="uploadFile">Archivo Excel (.xlsx)</label>
+        <input type="file" id="uploadFile" accept=".xlsx" class="file-input">
+        <div id="uploadResult" class="upload-result" hidden></div>
+      </div>
+      <div class="cds--modal-footer">
+        <button class="header-btn" id="uploadCancel" type="button">Cancelar</button>
+        <button class="header-btn header-btn--primary" id="uploadConfirm" type="button">Cargar</button>
+      </div>
+    </div>
   </div>
 
-  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

@@ -143,7 +143,71 @@ document.getElementById("toggleFilters").addEventListener("click", () => {
   appShell.dataset.navOpen = String(appShell.dataset.navOpen !== "true");
 });
 
-document.getElementById("loadDemo").addEventListener("click", showSkeleton);
+/* ── Modal Cargar Excel ───────────────────────────────────────── */
+const uploadModal   = document.getElementById("uploadModal");
+const uploadTipo    = document.getElementById("uploadTipo");
+const uploadFile    = document.getElementById("uploadFile");
+const uploadResult  = document.getElementById("uploadResult");
+const uploadConfirm = document.getElementById("uploadConfirm");
+
+function openUploadModal() {
+  uploadFile.value        = "";
+  uploadResult.hidden     = true;
+  uploadResult.className  = "upload-result";
+  uploadModal.classList.add("is-visible");
+}
+
+function closeUploadModal() {
+  uploadModal.classList.remove("is-visible");
+}
+
+function showUploadResult(msg, isError) {
+  uploadResult.textContent = msg;
+  uploadResult.className   = "upload-result" + (isError ? " error" : "");
+  uploadResult.hidden      = false;
+}
+
+document.getElementById("uploadModalClose").addEventListener("click", closeUploadModal);
+document.getElementById("uploadCancel").addEventListener("click", closeUploadModal);
+uploadModal.addEventListener("click", (e) => { if (e.target === uploadModal) closeUploadModal(); });
+
+uploadConfirm.addEventListener("click", async () => {
+  const file = uploadFile.files[0];
+  if (!file) { showUploadResult("Selecciona un archivo .xlsx primero.", true); return; }
+  if (!file.name.toLowerCase().endsWith(".xlsx")) { showUploadResult("Solo se aceptan archivos .xlsx.", true); return; }
+
+  uploadConfirm.disabled    = true;
+  uploadConfirm.textContent = "Cargando…";
+
+  const form = new FormData();
+  form.append("file", file);
+
+  try {
+    const res  = await fetch(`/api/upload/${uploadTipo.value}`, {
+      method:  "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body:    form,
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showUploadResult(data.error || "Error al procesar el archivo.", true);
+    } else {
+      showUploadResult(
+        `✓  ${data.rows_inserted} filas insertadas\n` +
+        `⊘  ${data.rows_skipped} omitidas (duplicadas)\n` +
+        `Total procesadas: ${data.rows_total}`,
+        false
+      );
+    }
+  } catch {
+    showUploadResult("Error de conexión al servidor.", true);
+  } finally {
+    uploadConfirm.disabled    = false;
+    uploadConfirm.textContent = "Cargar";
+  }
+});
+
+document.getElementById("loadDemo").addEventListener("click", openUploadModal);
 document.getElementById("exportCsv").addEventListener("click", exportCsv);
 
 [roomFilter, statusFilter, diffOnly].forEach((el) => el.addEventListener("change", renderRows));

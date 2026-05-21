@@ -25,10 +25,12 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from urllib.parse import parse_qs, urlparse
 
+import pandas as pd
 import jwt
 import pg8000.dbapi
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, url_for
+from io import BytesIO
 
 load_dotenv()
 
@@ -203,6 +205,134 @@ def api_me():
 @app.get("/api/health")
 def api_health():
     return jsonify({"status": "ok", "ts": datetime.now(timezone.utc).isoformat()})
+
+
+# ── Upload Excel ───────────────────────────────────────────────────
+_UPLOAD_TIPOS    = {"getnet", "premios", "comps", "coinin_mda", "coinin_mdj", "jefatura"}
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+_GETNET_REQUIRED_COLS = {
+    "Jornada", "Fecha", "Id Cliente", "Monto", "Voucher",
+    "Slot Attendant", "Validador", "Forma Pago", "Ingreso CAWA",
+}
+
+
+def _crear_operacion_uid(row) -> str:
+    fecha      = pd.to_datetime(row["Fecha"], dayfirst=True).strftime("%Y%m%d%H%M")
+    id_cliente = str(row["Id Cliente"]).replace("'", "").strip()
+    ultimos_12 = id_cliente[-12:]
+    monto      = int(float(row["Monto"]))
+    voucher    = str(row["Voucher"]).replace("'", "").strip().zfill(6)
+    return f"{fecha}-{ultimos_12}-{monto}-{voucher}"
+
+
+def _process_getnet(df: pd.DataFrame, filename: str) -> dict:
+    missing = _GETNET_REQUIRED_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"Columnas faltantes en el Excel: {sorted(missing)}")
+
+    df = df.copy()
+    df["operacion_uid"]  = df.apply(_crear_operacion_uid, axis=1)
+    df["jornada"]        = pd.to_datetime(df["Jornada"]).dt.date
+    df["fecha"]          = pd.to_datetime(df["Fecha"], dayfirst=True)
+    df["id_cliente"]     = df["Id Cliente"].astype(str).str.replace("'", "", regex=False).str.strip()
+    df["monto"]          = df["Monto"].astype(float).astype(int)
+    df["voucher"]        = df["Voucher"].astype(str).str.replace("'", "", regex=False).str.strip().str.zfill(6)
+    df["slot_attendant"] = df["Slot Attendant"].astype(str).str.strip()
+    df["validador"]      = df["Validador"].astype(str).str.strip()
+    df["forma_pago"]     = df["Forma Pago"].astype(str).str.strip()
+    df["ingreso_cawa"]   = df["Ingreso CAWA"].astype(str).str.strip()
+
+    sql = """
+    INSERT INTO getnet_transacciones
+        (jornada, fecha, id_cliente, monto, voucher,
+         slot_attendant, validador, forma_pago, ingreso_cawa,
+         operacion_uid, archivo_origen)
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    ON CONFLICT (operacion_uid) DO NOTHING
+    """
+    registros = [
+        (
+            row["jornada"],
+            row["fecha"].to_pydatetime(),
+            row["id_cliente"],
+            int(row["monto"]),
+            row["voucher"],
+            row["slot_attendant"],
+            row["validador"],
+            row["forma_pago"],
+            row["ingreso_cawa"],
+            row["operacion_uid"],
+            filename,
+        )
+        for _, row in df.iterrows()
+    ]
+
+    inserted = 0
+    conn = _get_conn()
+    try:
+        cur = conn.cursor()
+        for record in registros:
+            cur.execute(sql, record)
+            inserted += cur.rowcount
+        conn.commit()
+        cur.close()
+    finally:
+        _put_conn(conn)
+
+    return {
+        "rows_total":    len(registros),
+        "rows_inserted": inserted,
+        "rows_skipped":  len(registros) - inserted,
+    }
+
+
+_PROCESSORS = {
+    "getnet": _process_getnet,
+}
+
+
+@app.post("/api/upload/<tipo>")
+@require_auth
+def api_upload(tipo: str):
+    if tipo not in _UPLOAD_TIPOS:
+        return jsonify({"error": f"Tipo de archivo no válido: {tipo}"}), 400
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "No se recibió ningún archivo."}), 400
+
+    filename = file.filename
+    if not filename.lower().endswith(".xlsx"):
+        return jsonify({"error": "Solo se aceptan archivos .xlsx."}), 400
+
+    raw = file.read(_MAX_UPLOAD_BYTES + 1)
+    if len(raw) > _MAX_UPLOAD_BYTES:
+        return jsonify({"error": "El archivo supera el límite de 10 MB."}), 413
+
+    if tipo not in _PROCESSORS:
+        return jsonify({"error": f"Procesador para '{tipo}' aún no implementado."}), 501
+
+    try:
+        df = pd.read_excel(
+            BytesIO(raw),
+            sheet_name="Sheet1",
+            header=1,
+            dtype={"Id Cliente": str, "Voucher": str},
+        )
+    except Exception as exc:
+        app.logger.error("Error leyendo Excel '%s': %s", filename, exc)
+        return jsonify({"error": "No se pudo leer el archivo Excel. Verifica el formato."}), 422
+
+    try:
+        result = _PROCESSORS[tipo](df, filename)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 422
+    except Exception as exc:
+        app.logger.error("Error procesando '%s' tipo '%s': %s", filename, tipo, exc)
+        return jsonify({"error": "Error interno al procesar el archivo."}), 500
+
+    return jsonify({**result, "archivo": filename})
 
 
 # ── Inicio ─────────────────────────────────────────────────────────

@@ -497,3 +497,102 @@ button:focus-visible,input:focus-visible,select:focus-visible {
   .table-toolbar { align-items: flex-start; flex-direction: column; }
   .bar-row { grid-template-columns: 1fr; }
 }
+
+/* ── Modal Cargar Excel ─────────────────────────────────────────── */
+.cds--modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0,0,0,.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .15s ease, visibility .15s ease;
+}
+.cds--modal.is-visible { visibility: visible; opacity: 1; }
+
+.cds--modal-container {
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cds--modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--cds-spacing-05);
+  border-bottom: 1px solid var(--cds-border-subtle);
+}
+.cds--modal-header__heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  margin: 0;
+}
+.cds--modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cds-text-secondary);
+  padding: var(--cds-spacing-02);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.cds--modal-close:hover { color: var(--cds-text-primary); }
+
+.cds--modal-content { padding: var(--cds-spacing-05); flex: 1; }
+
+.cds--modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--cds-spacing-03);
+  padding: var(--cds-spacing-04) var(--cds-spacing-05);
+  border-top: 1px solid var(--cds-border-subtle);
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  padding: var(--cds-spacing-03) 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  color: var(--cds-text-primary);
+  font-family: inherit;
+  font-size: .875rem;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.file-input::file-selector-button {
+  background: var(--cds-layer-02);
+  border: 1px solid var(--cds-border-subtle);
+  color: var(--cds-text-primary);
+  font-family: inherit;
+  font-size: .875rem;
+  padding: var(--cds-spacing-02) var(--cds-spacing-04);
+  cursor: pointer;
+  margin-right: var(--cds-spacing-03);
+}
+.file-input::file-selector-button:hover { background: var(--cds-layer-03); }
+
+.upload-result {
+  margin-top: var(--cds-spacing-05);
+  padding: var(--cds-spacing-04);
+  font-size: .875rem;
+  border-left: 3px solid var(--cds-support-success);
+  background: var(--cds-layer-02);
+  color: var(--cds-text-primary);
+  white-space: pre-line;
+  line-height: 1.6;
+}
+.upload-result.error {
+  border-left-color: var(--cds-support-error);
+  color: var(--cds-text-error);
+}
