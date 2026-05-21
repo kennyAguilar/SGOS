@@ -59,6 +59,65 @@ const tooltip     = document.querySelector("#tooltip");
 const skeleton    = document.querySelector("#skeletonTable");
 const gridWrap    = document.querySelector("#gridWrap");
 
+/* ── Tab switching ──────────────────────────────────── */
+const tabBtns = document.querySelectorAll('.header-tab[data-tab]');
+
+function activateTab(tabId) {
+  tabBtns.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabId));
+  document.querySelectorAll('.tab-panel').forEach((p) => {
+    p.hidden = p.id !== `panel-${tabId}`;
+  });
+  if (tabId === 'resumen') loadResumenGetnet();
+}
+
+tabBtns.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+
+/* ── Resumen Getnet ───────────────────────────────── */
+const resumenEl = document.getElementById('resumenGetnet');
+const clpFmt    = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+
+async function loadResumenGetnet() {
+  if (!resumenEl) return;
+  resumenEl.innerHTML = '<p class="resumen-loading">Consultando base de datos…</p>';
+  try {
+    const res  = await fetch('/api/resumen/getnet', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+
+    if (!res.ok)    { resumenEl.innerHTML = `<p class="resumen-error">${data.error}</p>`; return; }
+    if (data.empty) { resumenEl.innerHTML = '<p class="resumen-empty">Sin datos — carga el primer Excel Getnet.</p>'; return; }
+
+    const jornada = new Date(data.ultima_jornada + 'T12:00:00')
+      .toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    resumenEl.innerHTML =
+      '<article class="resumen-card">' +
+        '<span class="rc-label">Mes cargado</span>' +
+        `<strong class="rc-value">${data.ultimo_mes}</strong>` +
+        `<small class="rc-sub">${data.ultima_carga}</small>` +
+      '</article>' +
+      '<article class="resumen-card">' +
+        '<span class="rc-label">Hasta jornada</span>' +
+        `<strong class="rc-value mono">${jornada}</strong>` +
+        '<small class="rc-sub">Última jornada registrada</small>' +
+      '</article>' +
+      '<article class="resumen-card rc-highlight">' +
+        '<span class="rc-label">Monto última jornada</span>' +
+        `<strong class="rc-value mono">${clpFmt.format(data.monto_ultima_jornada)}</strong>` +
+        `<small class="rc-sub">${data.ops_ultima_jornada.toLocaleString('es-CL')} operaciones</small>` +
+      '</article>' +
+      '<article class="resumen-card">' +
+        '<span class="rc-label">Total operaciones</span>' +
+        `<strong class="rc-value mono">${data.total_operaciones.toLocaleString('es-CL')}</strong>` +
+        `<small class="rc-sub">${data.ultimo_archivo ?? ''}</small>` +
+      '</article>';
+  } catch {
+    resumenEl.innerHTML = '<p class="resumen-error">Error de conexión al servidor.</p>';
+  }
+}
+
+/* Cargar al inicio (tab Resumen activo por defecto) */
+loadResumenGetnet();
+
 /* ── Lógica QA ────────────────────────────────────────────────── */
 function getStatus(row) {
   const diff    = row.srw - row.sgos;

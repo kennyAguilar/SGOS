@@ -21,13 +21,13 @@
     </span>
 
     <nav class="header-tabs" aria-label="Vistas de reporte">
-      <button class="header-tab active" type="button">Resumen</button>
-      <button class="header-tab" type="button">Getnet</button>
-      <button class="header-tab" type="button">Premios</button>
-      <button class="header-tab" type="button">Comps</button>
-      <button class="header-tab" type="button">Analisis general</button>
-      <button class="header-tab" type="button">Control</button>
-      <button class="header-tab" type="button">CoinIn Cero</button>
+      <button class="header-tab active" type="button" data-tab="resumen">Resumen</button>
+      <button class="header-tab" type="button" data-tab="getnet">Getnet</button>
+      <button class="header-tab" type="button" data-tab="premios">Premios</button>
+      <button class="header-tab" type="button" data-tab="comps">Comps</button>
+      <button class="header-tab" type="button" data-tab="analisis">Analisis general</button>
+      <button class="header-tab" type="button" data-tab="control">Control</button>
+      <button class="header-tab" type="button" data-tab="coinin">CoinIn Cero</button>
     </nav>
 
     <div class="header-actions">
@@ -100,7 +100,22 @@
     </aside>
 
     <main class="cds--content">
-      <div class="cds--grid">
+
+      <!-- ── Panel: Resumen ─────────────────────────────────── -->
+      <div id="panel-resumen" class="tab-panel cds--grid">
+        <section class="resumen-section" aria-label="Resumen de cargas">
+          <div class="section-title">
+            <p class="eyebrow">Getnet</p>
+            <h2>Estado de carga</h2>
+          </div>
+          <div class="resumen-cards" id="resumenGetnet">
+            <p class="resumen-loading">Consultando base de datos…</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ── Panel: Getnet (cuadratura) ────────────────────── -->
+      <div id="panel-getnet" class="tab-panel cds--grid" hidden>
 
         <section class="status-strip" aria-label="Indicadores clave">
           <article class="metric-card">
@@ -201,6 +216,14 @@
         </section>
 
       </div>
+
+      <!-- ── Paneles pendientes ─────────────────────────────── -->
+      <div id="panel-premios"  class="tab-panel cds--grid" hidden><p class="placeholder-msg">Módulo Premios — próximamente</p></div>
+      <div id="panel-comps"    class="tab-panel cds--grid" hidden><p class="placeholder-msg">Módulo Comps — próximamente</p></div>
+      <div id="panel-analisis" class="tab-panel cds--grid" hidden><p class="placeholder-msg">Análisis general — próximamente</p></div>
+      <div id="panel-control"  class="tab-panel cds--grid" hidden><p class="placeholder-msg">Control — próximamente</p></div>
+      <div id="panel-coinin"   class="tab-panel cds--grid" hidden><p class="placeholder-msg">CoinIn Cero — próximamente</p></div>
+
     </main>
 
   </div>

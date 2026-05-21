@@ -207,6 +207,55 @@ def api_health():
     return jsonify({"status": "ok", "ts": datetime.now(timezone.utc).isoformat()})
 
 
+@app.get("/api/resumen/getnet")
+@require_auth
+def api_resumen_getnet():
+    sql = """
+    WITH ultima AS (
+        SELECT MAX(jornada) AS jornada FROM getnet_transacciones
+    )
+    SELECT
+        u.jornada::text                                                              AS ultima_jornada,
+        TO_CHAR(u.jornada, 'FMMonth YYYY')                                          AS ultimo_mes,
+        (SELECT COUNT(*)::int       FROM getnet_transacciones)                      AS total_operaciones,
+        (SELECT SUM(g.monto)::bigint FROM getnet_transacciones g
+          WHERE g.jornada = u.jornada)                                              AS monto_ultima_jornada,
+        (SELECT COUNT(*)::int       FROM getnet_transacciones g
+          WHERE g.jornada = u.jornada)                                              AS ops_ultima_jornada,
+        (SELECT archivo_origen FROM getnet_transacciones
+          ORDER BY created_at DESC LIMIT 1)                                         AS ultimo_archivo,
+        TO_CHAR((SELECT MAX(created_at) FROM getnet_transacciones),
+                'DD/MM/YYYY HH24:MI')                                               AS ultima_carga
+    FROM ultima u
+    """
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+        cur.execute(sql)
+        row  = cur.fetchone()
+        cur.close()
+    except Exception as exc:
+        app.logger.error("resumen/getnet error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    if not row or row[0] is None:
+        return jsonify({"empty": True})
+
+    return jsonify({
+        "ultima_jornada":       row[0],
+        "ultimo_mes":           row[1],
+        "total_operaciones":    row[2],
+        "monto_ultima_jornada": int(row[3]) if row[3] else 0,
+        "ops_ultima_jornada":   row[4],
+        "ultimo_archivo":       row[5],
+        "ultima_carga":         row[6],
+    })
+
+
 # ── Upload Excel ───────────────────────────────────────────────────
 _UPLOAD_TIPOS    = {"getnet", "premios", "comps", "coinin_mda", "coinin_mdj", "jefatura"}
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
