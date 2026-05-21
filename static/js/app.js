@@ -87,6 +87,12 @@ async function loadResumenGetnet() {
     if (!res.ok)    { resumenEl.innerHTML = `<p class="resumen-error">${data.error}</p>`; return; }
     if (data.empty) { resumenEl.innerHTML = '<p class="resumen-empty">Sin datos — carga el primer Excel Getnet.</p>'; return; }
 
+    // Actualizar sidebar
+    const metaCarga   = document.getElementById("metaCarga");
+    const metaArchivo = document.getElementById("metaArchivo");
+    if (metaCarga)   metaCarga.textContent   = data.ultima_carga   || "—";
+    if (metaArchivo) metaArchivo.textContent = data.ultimo_archivo || "—";
+
     const jornada = new Date(data.ultima_jornada + 'T12:00:00')
       .toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
 
