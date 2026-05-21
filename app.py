@@ -218,6 +218,7 @@ def api_resumen_getnet():
         u.jornada::text                                                              AS ultima_jornada,
         TO_CHAR(u.jornada, 'FMMonth YYYY')                                          AS ultimo_mes,
         (SELECT COUNT(*)::int       FROM getnet_transacciones)                      AS total_operaciones,
+        (SELECT SUM(monto)::bigint  FROM getnet_transacciones)                      AS monto_total,
         (SELECT SUM(g.monto)::bigint FROM getnet_transacciones g
           WHERE g.jornada = u.jornada)                                              AS monto_ultima_jornada,
         (SELECT COUNT(*)::int       FROM getnet_transacciones g
@@ -249,10 +250,11 @@ def api_resumen_getnet():
         "ultima_jornada":       row[0],
         "ultimo_mes":           row[1],
         "total_operaciones":    row[2],
-        "monto_ultima_jornada": int(row[3]) if row[3] else 0,
-        "ops_ultima_jornada":   row[4],
-        "ultimo_archivo":       row[5],
-        "ultima_carga":         row[6],
+        "monto_total":          int(row[3]) if row[3] else 0,
+        "monto_ultima_jornada": int(row[4]) if row[4] else 0,
+        "ops_ultima_jornada":   row[5],
+        "ultimo_archivo":       row[6],
+        "ultima_carga":         row[7],
     })
 
 

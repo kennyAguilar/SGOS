@@ -101,14 +101,14 @@ async function loadResumenGetnet() {
         '<small class="rc-sub">Última jornada registrada</small>' +
       '</article>' +
       '<article class="resumen-card rc-highlight">' +
-        '<span class="rc-label">Monto última jornada</span>' +
-        `<strong class="rc-value mono">${clpFmt.format(data.monto_ultima_jornada)}</strong>` +
-        `<small class="rc-sub">${data.ops_ultima_jornada.toLocaleString('es-CL')} operaciones</small>` +
+        '<span class="rc-label">Monto total del mes</span>' +
+        `<strong class="rc-value mono">${clpFmt.format(data.monto_total)}</strong>` +
+        `<small class="rc-sub">${data.total_operaciones.toLocaleString('es-CL')} operaciones</small>` +
       '</article>' +
       '<article class="resumen-card">' +
-        '<span class="rc-label">Total operaciones</span>' +
-        `<strong class="rc-value mono">${data.total_operaciones.toLocaleString('es-CL')}</strong>` +
-        `<small class="rc-sub">${data.ultimo_archivo ?? ''}</small>` +
+        '<span class="rc-label">Última jornada</span>' +
+        `<strong class="rc-value mono">${clpFmt.format(data.monto_ultima_jornada)}</strong>` +
+        `<small class="rc-sub">${data.ops_ultima_jornada.toLocaleString('es-CL')} ops · ${jornada}</small>` +
       '</article>';
   } catch {
     resumenEl.innerHTML = '<p class="resumen-error">Error de conexión al servidor.</p>';
