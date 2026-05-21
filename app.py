@@ -273,6 +273,114 @@ def api_resumen_getnet():
     })
 
 
+@app.get("/api/getnet/dashboard")
+@require_auth
+def api_getnet_dashboard():
+    year = request.args.get("year", type=int)
+    if year:
+        w, p = "EXTRACT(YEAR FROM jornada) = %s", (year,)
+    else:
+        w, p = "1=1", None
+
+    def _q(cur, sql):
+        cur.execute(sql, p) if p else cur.execute(sql)
+        return cur.fetchall()
+
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+
+        rows_mes = _q(cur, f"""
+            SELECT EXTRACT(YEAR  FROM jornada)::int,
+                   EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada, 'FMMonth YYYY'),
+                   COUNT(*)::int,
+                   SUM(monto)::bigint
+            FROM getnet_transacciones
+            WHERE {w}
+            GROUP BY 1,2,3 ORDER BY 1,2
+        """)
+
+        rows_hora = _q(cur, f"""
+            WITH ph AS (
+                SELECT jornada,
+                       EXTRACT(HOUR FROM fecha)::int AS hora,
+                       COUNT(*)::int                 AS ops,
+                       SUM(monto)::bigint            AS monto
+                FROM getnet_transacciones WHERE {w}
+                GROUP BY jornada, hora
+            )
+            SELECT hora,
+                   ROUND(AVG(ops),   1)::float,
+                   ROUND(AVG(monto), 0)::bigint
+            FROM ph GROUP BY hora ORDER BY hora
+        """)
+
+        rows_heat = _q(cur, f"""
+            WITH ph AS (
+                SELECT jornada,
+                       EXTRACT(DOW  FROM jornada)::int AS dow,
+                       EXTRACT(HOUR FROM fecha)::int   AS hora,
+                       COUNT(*)::int                   AS ops
+                FROM getnet_transacciones WHERE {w}
+                GROUP BY jornada, dow, hora
+            ),
+            nd AS (
+                SELECT dow, COUNT(DISTINCT jornada)::int AS n
+                FROM ph GROUP BY dow
+            )
+            SELECT ph.dow, ph.hora,
+                   ROUND(SUM(ph.ops)::numeric / nd.n, 1)::float
+            FROM ph JOIN nd USING(dow)
+            GROUP BY ph.dow, ph.hora, nd.n
+            ORDER BY ph.dow, ph.hora
+        """)
+
+        meta_row = _q(cur, f"""
+            SELECT MIN(jornada)::text, MAX(jornada)::text,
+                   COUNT(DISTINCT jornada)::int,
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=1 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=2 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=3 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=4 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=5 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=6 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=0 THEN jornada END)
+            FROM getnet_transacciones WHERE {w}
+        """)
+
+        cur.close()
+    except Exception as exc:
+        app.logger.error("getnet/dashboard error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    m = meta_row[0] if meta_row else [None] * 10
+    return jsonify({
+        "por_mes": [
+            {"anio": r[0], "mes_num": r[1], "mes_label": r[2],
+             "ops": r[3], "monto": int(r[4]) if r[4] else 0}
+            for r in (rows_mes or [])
+        ],
+        "por_hora": [
+            {"hora": r[0], "prom_ops": float(r[1] or 0), "prom_monto": int(r[2] or 0)}
+            for r in (rows_hora or [])
+        ],
+        "heatmap": [
+            {"dow": r[0], "hora": r[1], "prom": float(r[2] or 0)}
+            for r in (rows_heat or [])
+        ],
+        "meta": {
+            "fecha_min": m[0], "fecha_max": m[1], "total_jornadas": m[2],
+            "lun": m[3], "mar": m[4], "mie": m[5],
+            "jue": m[6], "vie": m[7], "sab": m[8], "dom": m[9],
+        },
+    })
+
+
 # ── Upload Excel ───────────────────────────────────────────────────
 _UPLOAD_TIPOS    = {"getnet", "premios", "comps", "coinin_mda", "coinin_mdj", "jefatura"}
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB

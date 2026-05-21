@@ -604,6 +604,57 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 }
 .totals-row .numeric { color: var(--cds-interactive); }
 
+/* ── Getnet Dashboard ───────────────────────────────────────── */
+.gn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  padding: var(--cds-spacing-05) var(--cds-spacing-06);
+  margin-bottom: var(--cds-spacing-05);
+}
+.gn-header__title        { display:flex; align-items:center; gap:var(--cds-spacing-04); }
+.gn-header__title h1     { font-size:22px; font-weight:600; color:var(--cds-text-primary); margin:0; }
+.gn-header__meta         { font-size:13px; color:var(--cds-text-secondary); display:flex; align-items:center; gap:var(--cds-spacing-03); }
+.gn-header__meta strong  { color:var(--cds-interactive); font-size:14px; }
+
+.gn-legend {
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  padding: var(--cds-spacing-05) var(--cds-spacing-06);
+  margin-bottom: var(--cds-spacing-05);
+}
+.gn-legend__head { display:flex; align-items:center; gap:var(--cds-spacing-03); color:var(--cds-interactive); font-weight:600; font-size:13px; margin:0 0 var(--cds-spacing-04); }
+.gn-legend__grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:var(--cds-spacing-03) var(--cds-spacing-06); }
+.gn-legend__grid > div strong { display:block; font-size:12px; color:var(--cds-text-primary); margin-bottom:2px; }
+.gn-legend__grid > div p      { font-size:11px; color:var(--cds-text-secondary); margin:0; line-height:1.5; }
+
+.gn-charts-row               { display:grid; grid-template-columns:1fr 1fr; gap:var(--cds-spacing-05); margin-bottom:var(--cds-spacing-05); }
+.gn-chart-card               { background:var(--cds-layer-01); border:1px solid var(--cds-border-subtle); border-radius:4px; padding:var(--cds-spacing-05) var(--cds-spacing-06); }
+.gn-full-card                { margin-bottom:var(--cds-spacing-05); }
+.gn-chart-card__head         { display:flex; align-items:center; gap:var(--cds-spacing-03); margin-bottom:var(--cds-spacing-05); }
+.gn-chart-card__head h2      { font-size:15px; font-weight:600; color:var(--cds-text-primary); margin:0; }
+.gn-chart-card__head h2 em   { font-style:normal; color:var(--cds-text-secondary); font-weight:400; font-size:12px; }
+.gn-chart-card__body         { position:relative; height:220px; }
+.gn-chart-card__body canvas  { width:100% !important; height:100% !important; }
+
+.gn-badge { display:inline-block; background:#4fd1c5; color:#000; font-size:11px; font-weight:600; padding:2px 8px; border-radius:3px; margin-left:var(--cds-spacing-03); }
+
+.gn-heatmap-info         { font-size:12px; color:var(--cds-text-secondary); margin:0 0 var(--cds-spacing-04); line-height:1.5; }
+.gn-heatmap-info em      { color:var(--cds-text-primary); font-style:normal; }
+.gn-heatmap-meta         { font-size:11px; font-family:var(--cds-font-mono); margin-bottom:var(--cds-spacing-04); display:flex; flex-wrap:wrap; gap:var(--cds-spacing-03); }
+.gn-heatmap-meta span    { background:var(--cds-layer-02); padding:2px 6px; border-radius:2px; }
+.gn-heatmap-meta span strong { color:var(--cds-text-primary); }
+.gn-heatmap-wrap         { overflow-x:auto; }
+.gn-heatmap              { border-collapse:collapse; font-size:11px; white-space:nowrap; }
+.gn-heatmap th           { text-align:left; font-weight:500; color:var(--cds-text-secondary); padding:4px 8px; min-width:90px; }
+.gn-heatmap th.hora-th   { min-width:32px; text-align:center; color:var(--cds-text-helper); font-weight:400; }
+.gn-heatmap td           { text-align:center; padding:5px 4px; font-family:var(--cds-font-mono); min-width:32px; border:1px solid var(--cds-border-subtle); }
+.gn-empty                { color:var(--cds-text-secondary); font-size:13px; text-align:center; padding:var(--cds-spacing-07); }
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .cds--side-nav { display: none; }

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -139,103 +140,89 @@
       <!-- ── Panel: Getnet (cuadratura) ────────────────────── -->
       <div id="panel-getnet" class="tab-panel cds--grid" hidden>
 
-        <section class="status-strip" aria-label="Indicadores clave">
-          <article class="metric-card">
-            <span>Total SRW</span>
-            <strong class="mono">$128,540.75</strong>
-            <small>+4.2% vs ayer</small>
-          </article>
-          <article class="metric-card">
-            <span>Total SGOS</span>
-            <strong class="mono">$128,177.40</strong>
-            <small>Revision de 18 cortes</small>
-          </article>
-          <article class="metric-card metric-warning">
-            <span>Diferencia neta</span>
-            <strong class="mono">$363.35</strong>
-            <small>2 cortes requieren atencion</small>
-          </article>
-          <article class="metric-card metric-success">
-            <span>Cuadratura</span>
-            <strong class="mono">98.7%</strong>
-            <small>Objetivo operativo 99%</small>
-          </article>
-        </section>
-
-        <section class="analysis-band" aria-label="Resumen visual">
-          <div class="chart-panel">
-            <div class="section-title">
-              <p class="eyebrow">Tendencia</p>
-              <h2>Comparativo por sala</h2>
-            </div>
-            <div class="bar-chart" aria-label="Grafico comparativo SRW vs SGOS">
-              <div class="bar-row">
-                <span>Norte</span>
-                <div class="bar-track"><i style="width:93%"></i><b style="width:91%"></b></div>
-                <strong class="mono">0.23%</strong>
-              </div>
-              <div class="bar-row">
-                <span>Centro</span>
-                <div class="bar-track"><i style="width:88%"></i><b style="width:86%"></b></div>
-                <strong class="mono warn-text">0.72%</strong>
-              </div>
-              <div class="bar-row">
-                <span>Sur</span>
-                <div class="bar-track"><i style="width:76%"></i><b style="width:68%"></b></div>
-                <strong class="mono error-text">1.84%</strong>
-              </div>
-            </div>
+        <!-- ── Header ───────────────────────────────────────────── -->
+        <section class="gn-header">
+          <div class="gn-header__title">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <circle cx="16" cy="16" r="13" stroke="var(--cds-interactive)" stroke-width="1.5"/>
+              <path d="M16 16 L16 3 A13 13 0 0 1 27.3 22.5 Z" fill="var(--cds-interactive)" opacity="0.9"/>
+              <path d="M16 16 L27.3 22.5 A13 13 0 0 1 4.7 22.5 Z" fill="var(--cds-interactive)" opacity="0.55"/>
+              <path d="M16 16 L4.7 22.5 A13 13 0 0 1 16 3 Z" fill="var(--cds-interactive)" opacity="0.28"/>
+            </svg>
+            <h1>Dashboard de Reportes</h1>
           </div>
-
-          <div class="qa-panel">
-            <div class="section-title">
-              <p class="eyebrow">QA</p>
-              <h2>Reglas activas</h2>
-            </div>
-            <div class="rule-list">
-              <span><i class="dot success"></i> Coincidencia exacta</span>
-              <span><i class="dot warning"></i> Diferencia menor a 1%</span>
-              <span><i class="dot danger"></i> Diferencia mayor a 1%</span>
-            </div>
+          <div class="gn-header__meta">
+            <span>Año activo:</span>
+            <strong id="gnYearLabel">Todos</strong>
           </div>
         </section>
 
-        <section class="table-shell" aria-label="Cuadratura SRW contra SGOS">
-          <div class="table-toolbar">
-            <div class="section-title">
-              <p class="eyebrow">Data grid</p>
-              <h2>Cuadratura SRW vs SGOS</h2>
-            </div>
-            <div class="legend">
-              <span><i class="dot success"></i> OK</span>
-              <span><i class="dot warning"></i> Atencion</span>
-              <span><i class="dot danger"></i> Critico</span>
-            </div>
-          </div>
-
-          <div class="skeleton-table" id="skeletonTable" hidden aria-hidden="true">
-            <span></span><span></span><span></span><span></span>
-            <span></span><span></span><span></span><span></span>
-            <span></span><span></span><span></span><span></span>
-          </div>
-
-          <div class="data-grid-wrap" id="gridWrap">
-            <table class="data-grid">
-              <thead>
-                <tr>
-                  <th>Sala</th>
-                  <th>Maquina</th>
-                  <th>Fecha corte</th>
-                  <th class="numeric">SRW</th>
-                  <th class="numeric">SGOS</th>
-                  <th class="numeric">Dif.</th>
-                  <th>QA</th>
-                </tr>
-              </thead>
-              <tbody id="reportRows"></tbody>
-            </table>
+        <!-- ── Leyenda ─────────────────────────────────────────── -->
+        <section class="gn-legend">
+          <p class="gn-legend__head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            Leyenda de cálculos
+          </p>
+          <div class="gn-legend__grid">
+            <div><strong>Base de datos</strong><p>Getnet usa las operaciones históricas cargadas. El filtro de año limita todos los gráficos.</p></div>
+            <div><strong>Operaciones por Mes</strong><p>Cuenta operaciones válidas agrupadas por Mes.</p></div>
+            <div><strong>Montos por Mes</strong><p>Suma la columna Monto agrupada por Mes.</p></div>
+            <div><strong>Promedios por Hora</strong><p>Agrupa por Hora en jornada 10:00 a 08:00 y divide entre jornadas únicas del periodo.</p></div>
+            <div><strong>Mapa de calor</strong><p>Cada celda Día × Hora divide el total de esa franja entre la cantidad de jornadas de ese día de la semana.</p></div>
           </div>
         </section>
+
+        <!-- ── Fila 1: Ops/Mes · Montos/Mes ──────────────────── -->
+        <div class="gn-charts-row">
+          <div class="gn-chart-card">
+            <div class="gn-chart-card__head">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><rect x="3" y="10" width="4" height="11"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="13" width="4" height="8"/></svg>
+              <h2>Operaciones por Mes</h2>
+            </div>
+            <div class="gn-chart-card__body"><canvas id="chartOpsMes"></canvas></div>
+          </div>
+          <div class="gn-chart-card">
+            <div class="gn-chart-card__head">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              <h2>Montos por Mes</h2>
+            </div>
+            <div class="gn-chart-card__body"><canvas id="chartMontosMes"></canvas></div>
+          </div>
+        </div>
+
+        <!-- ── Fila 2: Ops/Hora · Montos/Hora ────────────────── -->
+        <div class="gn-charts-row">
+          <div class="gn-chart-card">
+            <div class="gn-chart-card__head">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <h2>Operaciones por Hora <em>(Promedio)</em></h2>
+            </div>
+            <div class="gn-chart-card__body"><canvas id="chartOpsHora"></canvas></div>
+          </div>
+          <div class="gn-chart-card">
+            <div class="gn-chart-card__head">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <h2>Montos por Hora <em>(Promedio)</em></h2>
+            </div>
+            <div class="gn-chart-card__body"><canvas id="chartMontosHora"></canvas></div>
+          </div>
+        </div>
+
+        <!-- ── Mapa de Calor ───────────────────────────────────── -->
+        <div class="gn-chart-card gn-full-card">
+          <div class="gn-chart-card__head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+            <h2>Mapa de Calor &middot; Día &times; Hora <span class="gn-badge">Promedio</span></h2>
+          </div>
+          <p class="gn-heatmap-info">
+            <em>¿Cómo se calcula el promedio?</em> Cada celda muestra el <em>promedio por jornada</em>: se suman todas las operaciones ocurridas en esa franja horaria de ese día de la semana y se dividen entre la cantidad de fechas únicas de ese día presentes en los datos.
+          </p>
+          <div class="gn-heatmap-meta" id="gnHeatmapMeta"></div>
+          <div class="gn-heatmap-wrap" id="gnHeatmap"><p class="gn-empty">Cargando…</p></div>
+        </div>
 
       </div>
 
