@@ -289,6 +289,7 @@ function getFiltered() {
 
 /* ── Render tabla ─────────────────────────────────────────────── */
 function renderRows() {
+  if (!rowsTarget) return;   /* guard: el elemento puede no existir en esta vista */
   const rows = getFiltered();
   if (!rows.length) {
     rowsTarget.innerHTML = `<tr><td colspan="7" class="empty-state">No hay cortes que coincidan con los filtros.</td></tr>`;
@@ -461,9 +462,11 @@ const applyFilter = document.getElementById("applyFilter");
 [showTotals].forEach((el) => el.addEventListener("change", renderRows));
 nameFilter.addEventListener("input", renderRows);
 applyFilter.addEventListener("click", () => {
-  renderRows();
-  if (document.querySelector(".header-tab.active")?.dataset.tab === "getnet") {
+  const activeTab = document.querySelector(".header-tab.active")?.dataset.tab;
+  if (activeTab === "getnet") {
     loadGetnetDashboard();
+  } else {
+    renderRows();
   }
 });
 
