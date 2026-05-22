@@ -12,5 +12,9 @@ env/
 # Logs
 *.log
 
+# Archivos de datos Excel (no versionar)
+*.xlsx
+*.xls
+
 # Node (carpeta backend anterior)
 backend/node_modules/

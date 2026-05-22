@@ -61,6 +61,42 @@ CREATE TABLE IF NOT EXISTS upload_log (
 
 CREATE INDEX IF NOT EXISTS idx_upload_log_uploaded ON upload_log (uploaded_at DESC);
 
+-- Tabla de transacciones Premios
+CREATE TABLE IF NOT EXISTS premios_transacciones (
+    id                  BIGINT        GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    fecha               TIMESTAMP     NOT NULL,
+    jornada             DATE          NOT NULL,
+    cliente             TEXT          NOT NULL,
+    transferencia_final NUMERIC(12,0) NOT NULL,
+    slot_attendant      TEXT,
+    tipo_pago           TEXT,
+    operacion_uid       TEXT          NOT NULL UNIQUE,
+    archivo_origen      TEXT,
+    created_at          TIMESTAMP     DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_premios_jornada ON premios_transacciones (jornada DESC);
+
+-- Tabla de Comps (Voucher Complementary)
+CREATE TABLE IF NOT EXISTS comps_transacciones (
+    id              BIGINT       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    comps_uid       TEXT         NOT NULL UNIQUE,
+    consumo_id      TEXT         NOT NULL,
+    fecha_jornada   DATE         NOT NULL,
+    cliente_id      TEXT,
+    nombre_cliente  TEXT,
+    descripcion_cat TEXT,
+    descripcion_prod TEXT,
+    micros          NUMERIC(12,0),
+    estado          TEXT,
+    usuario_id      TEXT,
+    nombre_usuario  TEXT,
+    archivo_origen  TEXT,
+    created_at      TIMESTAMP    DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_comps_jornada ON comps_transacciones (fecha_jornada DESC);
+
 -- ──────────────────────────────────────────────────────────────────
 -- Para crear el primer usuario administrador ejecuta:
 --   python create_user.py

@@ -330,6 +330,141 @@ def api_getnet_historico():
     })
 
 
+@app.get("/api/premios/historico")
+@require_auth
+def api_premios_historico():
+    year       = request.args.get("year",       type=int)
+    month      = request.args.get("month",      type=int)
+    attendants = request.args.get("attendants", "")
+    tipos      = request.args.get("tipos",      "")
+
+    base_conds, base_params = [], []
+    if year:
+        base_conds.append("EXTRACT(YEAR  FROM jornada) = %s"); base_params.append(year)
+    if month:
+        base_conds.append("EXTRACT(MONTH FROM jornada) = %s"); base_params.append(month)
+    bw = " AND ".join(base_conds) if base_conds else "1=1"
+    bp = tuple(base_params) if base_params else None
+
+    att_list  = [a.strip() for a in attendants.split(",") if a.strip()] if attendants else []
+    tipo_list = [t.strip() for t in tipos.split(",")      if t.strip()] if tipos      else []
+    full_conds  = list(base_conds)
+    full_params = list(base_params)
+    if att_list:
+        ph = ",".join(["%s"] * len(att_list))
+        full_conds.append(f"slot_attendant IN ({ph})")
+        full_params.extend(att_list)
+    if tipo_list:
+        ph = ",".join(["%s"] * len(tipo_list))
+        full_conds.append(f"tipo_pago IN ({ph})")
+        full_params.extend(tipo_list)
+    fw = " AND ".join(full_conds) if full_conds else "1=1"
+    fp = tuple(full_params) if full_params else None
+
+    def _q(cur, sql, p): cur.execute(sql, p) if p else cur.execute(sql); return cur.fetchall()
+
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+
+        cur.execute(
+            f"SELECT DISTINCT slot_attendant FROM premios_transacciones "
+            f"WHERE {bw} AND slot_attendant IS NOT NULL ORDER BY 1", bp
+        ) if bp else cur.execute(
+            f"SELECT DISTINCT slot_attendant FROM premios_transacciones "
+            f"WHERE {bw} AND slot_attendant IS NOT NULL ORDER BY 1"
+        )
+        all_attendants = [r[0] for r in cur.fetchall()]
+
+        cur.execute(
+            f"SELECT DISTINCT tipo_pago FROM premios_transacciones "
+            f"WHERE {bw} AND tipo_pago IS NOT NULL ORDER BY 1", bp
+        ) if bp else cur.execute(
+            f"SELECT DISTINCT tipo_pago FROM premios_transacciones "
+            f"WHERE {bw} AND tipo_pago IS NOT NULL ORDER BY 1"
+        )
+        all_tipos = [r[0] for r in cur.fetchall()]
+
+        mes_rows = _q(cur, f"""
+            SELECT EXTRACT(YEAR FROM jornada)::int, EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada,'FMMonth YYYY'),
+                   COALESCE(tipo_pago,'Sin clasificar'),
+                   COUNT(*)::int, SUM(transferencia_final)::bigint
+            FROM premios_transacciones WHERE {fw} GROUP BY 1,2,3,4 ORDER BY 1,2,4
+        """, fp)
+
+        hora_rows = _q(cur, f"""
+            SELECT EXTRACT(HOUR FROM fecha)::int AS hora,
+                   COALESCE(tipo_pago,'Sin clasificar'),
+                   COUNT(*)::int AS operaciones, SUM(transferencia_final)::bigint AS monto
+            FROM premios_transacciones WHERE {fw} GROUP BY 1,2 ORDER BY 1,2
+        """, fp)
+
+        record_rows = _q(cur, f"""
+            SELECT slot_attendant,
+                   COALESCE(tipo_pago,'Sin clasificar'),
+                   COUNT(*)::int AS operaciones, SUM(transferencia_final)::bigint AS monto
+            FROM premios_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1,2 ORDER BY 1,2
+        """, fp)
+
+        att_mes_rows = _q(cur, f"""
+            SELECT slot_attendant,
+                   EXTRACT(YEAR FROM jornada)::int, EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada,'FMMonth YYYY'),
+                   COALESCE(tipo_pago,'Sin clasificar'),
+                   COUNT(*)::int, SUM(transferencia_final)::bigint
+            FROM premios_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1,2,3,4,5 ORDER BY 1,2,3,5
+        """, fp)
+
+        tipo_rows = _q(cur, f"""
+            SELECT COALESCE(tipo_pago,'Sin clasificar') AS categoria,
+                   COUNT(*)::int AS operaciones, SUM(transferencia_final)::bigint AS monto
+            FROM premios_transacciones WHERE {fw} GROUP BY 1 ORDER BY 2 DESC
+        """, fp)
+
+        anual_rows = _q(cur, f"""
+            SELECT slot_attendant, EXTRACT(YEAR FROM jornada)::int AS year,
+                   COALESCE(tipo_pago,'Sin clasificar'),
+                   COUNT(*)::int AS operaciones, SUM(transferencia_final)::bigint AS monto
+            FROM premios_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1,2,3 ORDER BY 1,2,3
+        """, fp)
+
+        conteo_rows = _q(cur, f"""
+            SELECT EXTRACT(YEAR FROM jornada)::int,
+                   EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada,'FMMonth YYYY'),
+                   slot_attendant,
+                   COALESCE(tipo_pago,'Sin clasificar'),
+                   COUNT(*)::int
+            FROM premios_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1,2,3,4,5 ORDER BY 1,2,4
+        """, fp)
+
+        cur.close()
+    except Exception as exc:
+        app.logger.error("premios/historico error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    return jsonify({
+        "attendants":  all_attendants,
+        "tipos":       all_tipos,
+        "rows_mes":    [{"year":r[0],"month":r[1],"mes":r[2],"tipo":r[3],"operaciones":r[4],"monto":int(r[5] or 0)} for r in mes_rows],
+        "rows_hora":   [{"hora":r[0],"tipo":r[1],"operaciones":r[2],"monto":int(r[3] or 0)} for r in hora_rows],
+        "rows_record": [{"attendant":r[0],"tipo":r[1],"operaciones":r[2],"monto":int(r[3] or 0)} for r in record_rows],
+        "rows_att_mes":[{"attendant":r[0],"year":r[1],"month":r[2],"mes":r[3],"tipo":r[4],"operaciones":r[5],"monto":int(r[6] or 0)} for r in att_mes_rows],
+        "rows_tipo":   [{"categoria":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in tipo_rows],
+        "rows_anual":  [{"attendant":r[0],"year":int(r[1]),"tipo":r[2],"operaciones":r[3],"monto":int(r[4] or 0)} for r in anual_rows],
+        "rows_conteo": [{"year":r[0],"month":r[1],"mes":r[2],"attendant":r[3],"tipo":r[4],"count":r[5]} for r in conteo_rows],
+    })
+
+
 @app.get("/api/resumen/getnet")
 @require_auth
 def api_resumen_getnet():
@@ -378,6 +513,316 @@ def api_resumen_getnet():
         "ops_ultima_jornada":   row[5],
         "ultimo_archivo":       row[6],
         "ultima_carga":         row[7],
+    })
+
+
+@app.get("/api/resumen/premios")
+@require_auth
+def api_resumen_premios():
+    sql = """
+    WITH ultima AS (
+        SELECT MAX(jornada) AS jornada FROM premios_transacciones
+    )
+    SELECT
+        u.jornada::text                                                                  AS ultima_jornada,
+        TO_CHAR(u.jornada, 'FMMonth YYYY')                                               AS ultimo_mes,
+        (SELECT COUNT(*)::int              FROM premios_transacciones)                   AS total_operaciones,
+        (SELECT SUM(transferencia_final)::bigint FROM premios_transacciones)             AS monto_total,
+        (SELECT SUM(p.transferencia_final)::bigint FROM premios_transacciones p
+          WHERE p.jornada = u.jornada)                                                   AS monto_ultima_jornada,
+        (SELECT COUNT(*)::int              FROM premios_transacciones p
+          WHERE p.jornada = u.jornada)                                                   AS ops_ultima_jornada,
+        (SELECT archivo_origen FROM premios_transacciones
+          ORDER BY created_at DESC LIMIT 1)                                              AS ultimo_archivo,
+        TO_CHAR((SELECT MAX(created_at) FROM premios_transacciones),
+                'DD/MM/YYYY HH24:MI')                                                    AS ultima_carga
+    FROM ultima u
+    """
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+        cur.execute(sql)
+        row  = cur.fetchone()
+        cur.close()
+    except Exception as exc:
+        app.logger.error("resumen/premios error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    if not row or row[0] is None:
+        return jsonify({"empty": True})
+
+    return jsonify({
+        "ultima_jornada":       row[0],
+        "ultimo_mes":           row[1],
+        "total_operaciones":    row[2],
+        "monto_total":          int(row[3]) if row[3] else 0,
+        "monto_ultima_jornada": int(row[4]) if row[4] else 0,
+        "ops_ultima_jornada":   row[5],
+        "ultimo_archivo":       row[6],
+        "ultima_carga":         row[7],
+    })
+
+
+@app.get("/api/resumen/comps")
+@require_auth
+def api_resumen_comps():
+    sql = """
+    WITH ultima AS (
+        SELECT MAX(fecha_jornada) AS jornada FROM comps_transacciones
+    )
+    SELECT
+        u.jornada::text                                                                  AS ultima_jornada,
+        TO_CHAR(u.jornada, 'FMMonth YYYY')                                               AS ultimo_mes,
+        (SELECT COUNT(*)::int        FROM comps_transacciones)                           AS total_operaciones,
+        (SELECT SUM(micros)::bigint  FROM comps_transacciones)                           AS monto_total,
+        (SELECT SUM(c.micros)::bigint FROM comps_transacciones c
+          WHERE c.fecha_jornada = u.jornada)                                             AS monto_ultima_jornada,
+        (SELECT COUNT(*)::int        FROM comps_transacciones c
+          WHERE c.fecha_jornada = u.jornada)                                             AS ops_ultima_jornada,
+        (SELECT archivo_origen FROM comps_transacciones
+          ORDER BY created_at DESC LIMIT 1)                                              AS ultimo_archivo,
+        TO_CHAR((SELECT MAX(created_at) FROM comps_transacciones),
+                'DD/MM/YYYY HH24:MI')                                                    AS ultima_carga
+    FROM ultima u
+    """
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+        cur.execute(sql)
+        row  = cur.fetchone()
+        cur.close()
+    except Exception as exc:
+        app.logger.error("resumen/comps error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    if not row or row[0] is None:
+        return jsonify({"empty": True})
+
+    return jsonify({
+        "ultima_jornada":       row[0],
+        "ultimo_mes":           row[1],
+        "total_operaciones":    row[2],
+        "monto_total":          int(row[3]) if row[3] else 0,
+        "monto_ultima_jornada": int(row[4]) if row[4] else 0,
+        "ops_ultima_jornada":   row[5],
+        "ultimo_archivo":       row[6],
+        "ultima_carga":         row[7],
+    })
+
+
+@app.get("/api/comps/historico")
+@require_auth
+def api_comps_historico():
+    year  = request.args.get("year",  type=int)
+    month = request.args.get("month", type=int)
+    usuarios_str = request.args.get("usuarios", "")
+    cats_str     = request.args.get("categorias", "")
+    estados_str  = request.args.get("estados", "")
+    usuarios = [u for u in usuarios_str.split(",") if u]
+    cats     = [c for c in cats_str.split(",") if c]
+    estados  = [e for e in estados_str.split(",") if e]
+
+    # Base filter (solo year/month) — para listas de filtros disponibles
+    bw = "1=1"
+    bp = []
+    if year:
+        bw += " AND EXTRACT(YEAR FROM fecha_jornada) = %s"
+        bp.append(year)
+    if month:
+        bw += " AND EXTRACT(MONTH FROM fecha_jornada) = %s"
+        bp.append(month)
+
+    # Full filter (year/month + selects)
+    fw = bw
+    fp = list(bp)
+    if usuarios:
+        ph = ",".join(["%s"] * len(usuarios))
+        fw += f" AND nombre_usuario IN ({ph})"
+        fp.extend(usuarios)
+    if cats:
+        ph = ",".join(["%s"] * len(cats))
+        fw += f" AND descripcion_cat IN ({ph})"
+        fp.extend(cats)
+    if estados:
+        ph = ",".join(["%s"] * len(estados))
+        fw += f" AND estado IN ({ph})"
+        fp.extend(estados)
+
+    bp = tuple(bp); fp = tuple(fp)
+    conn = None
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        def _q(cur, sql, p): cur.execute(sql, p) if p else cur.execute(sql); return cur.fetchall()
+
+        cur.execute(
+            f"SELECT DISTINCT nombre_usuario FROM comps_transacciones "
+            f"WHERE {bw} AND nombre_usuario IS NOT NULL AND nombre_usuario <> '' ORDER BY 1", bp
+        ) if bp else cur.execute(
+            f"SELECT DISTINCT nombre_usuario FROM comps_transacciones "
+            f"WHERE {bw} AND nombre_usuario IS NOT NULL AND nombre_usuario <> '' ORDER BY 1"
+        )
+        all_usuarios = [r[0] for r in cur.fetchall()]
+
+        cur.execute(
+            f"SELECT DISTINCT descripcion_cat FROM comps_transacciones "
+            f"WHERE {bw} AND descripcion_cat IS NOT NULL AND descripcion_cat <> '' ORDER BY 1", bp
+        ) if bp else cur.execute(
+            f"SELECT DISTINCT descripcion_cat FROM comps_transacciones "
+            f"WHERE {bw} AND descripcion_cat IS NOT NULL AND descripcion_cat <> '' ORDER BY 1"
+        )
+        all_cats = [r[0] for r in cur.fetchall()]
+
+        cur.execute(
+            f"SELECT DISTINCT estado FROM comps_transacciones "
+            f"WHERE {bw} AND estado IS NOT NULL AND estado <> '' ORDER BY 1", bp
+        ) if bp else cur.execute(
+            f"SELECT DISTINCT estado FROM comps_transacciones "
+            f"WHERE {bw} AND estado IS NOT NULL AND estado <> '' ORDER BY 1"
+        )
+        all_estados = [r[0] for r in cur.fetchall()]
+
+        mes_rows = _q(cur, f"""
+            SELECT EXTRACT(YEAR FROM fecha_jornada)::int, EXTRACT(MONTH FROM fecha_jornada)::int,
+                   TO_CHAR(fecha_jornada,'FMMonth YYYY'),
+                   COALESCE(estado,'Sin clasificar'),
+                   COUNT(*)::int, SUM(micros)::bigint
+            FROM comps_transacciones WHERE {fw} GROUP BY 1,2,3,4 ORDER BY 1,2,4
+        """, fp)
+
+        cat_rows = _q(cur, f"""
+            SELECT COALESCE(descripcion_cat,'Sin clasificar'),
+                   COUNT(*)::int, SUM(micros)::bigint
+            FROM comps_transacciones WHERE {fw} GROUP BY 1 ORDER BY 2 DESC
+        """, fp)
+
+        prod_rows = _q(cur, f"""
+            SELECT COALESCE(descripcion_prod,'Sin producto'),
+                   COALESCE(descripcion_cat,'Sin clasificar'),
+                   COUNT(*)::int, SUM(micros)::bigint
+            FROM comps_transacciones WHERE {fw} GROUP BY 1,2 ORDER BY 3 DESC
+        """, fp)
+
+        usuario_rows = _q(cur, f"""
+            SELECT COALESCE(NULLIF(nombre_usuario,''),'(sin usuario)'),
+                   COUNT(*)::int, SUM(micros)::bigint
+            FROM comps_transacciones WHERE {fw} GROUP BY 1 ORDER BY 2 DESC
+        """, fp)
+
+        estado_rows = _q(cur, f"""
+            SELECT COALESCE(estado,'Sin clasificar'),
+                   COUNT(*)::int, SUM(micros)::bigint
+            FROM comps_transacciones WHERE {fw} GROUP BY 1 ORDER BY 2 DESC
+        """, fp)
+
+        cliente_rows = _q(cur, f"""
+            WITH cps AS (
+                SELECT cliente_id,
+                       COALESCE(NULLIF(MAX(nombre_cliente),''),'(sin nombre)') AS nombre,
+                       COUNT(*)::int                              AS ops,
+                       COALESCE(SUM(micros),0)::bigint            AS monto
+                FROM comps_transacciones WHERE {fw}
+                GROUP BY cliente_id
+            ),
+            cin AS (
+                SELECT g.id_cliente, COALESCE(SUM(g.monto),0)::bigint AS coinin
+                FROM getnet_transacciones g
+                INNER JOIN cps ON cps.cliente_id = g.id_cliente
+                GROUP BY g.id_cliente
+            )
+            SELECT c.nombre, c.ops, c.monto, COALESCE(cin.coinin,0)
+            FROM cps c
+            LEFT JOIN cin ON cin.id_cliente = c.cliente_id
+            ORDER BY c.monto DESC LIMIT 50
+        """, fp)
+
+        # ── KPIs ────────────────────────────────────────────────
+        cur.execute(f"""
+            SELECT COUNT(*)::int,
+                   COALESCE(SUM(micros),0)::bigint,
+                   COUNT(DISTINCT cliente_id)::int
+            FROM comps_transacciones WHERE {fw}
+        """, fp) if fp else cur.execute(f"""
+            SELECT COUNT(*)::int,
+                   COALESCE(SUM(micros),0)::bigint,
+                   COUNT(DISTINCT cliente_id)::int
+            FROM comps_transacciones WHERE {fw}
+        """)
+        _kpi = cur.fetchone()
+        kpi_total_comps    = int(_kpi[0] or 0)
+        kpi_total_monto    = int(_kpi[1] or 0)
+        kpi_clientes_unico = int(_kpi[2] or 0)
+
+        cur.execute(f"""
+            SELECT COALESCE(SUM(g.monto),0)::bigint
+            FROM getnet_transacciones g
+            WHERE g.id_cliente IN (
+                SELECT DISTINCT cliente_id FROM comps_transacciones WHERE {fw}
+            )
+        """, fp) if fp else cur.execute(f"""
+            SELECT COALESCE(SUM(g.monto),0)::bigint
+            FROM getnet_transacciones g
+            WHERE g.id_cliente IN (
+                SELECT DISTINCT cliente_id FROM comps_transacciones WHERE {fw}
+            )
+        """)
+        kpi_total_coinin = int(cur.fetchone()[0] or 0)
+
+        # ── Serie diaria ────────────────────────────────────────
+        diario_rows = _q(cur, f"""
+            SELECT fecha_jornada,
+                   COUNT(*)::int,
+                   COALESCE(SUM(micros),0)::bigint
+            FROM comps_transacciones WHERE {fw}
+            GROUP BY 1 ORDER BY 1
+        """, fp)
+
+        # ── Promedio por día de la semana ──────────────────────
+        # DOW Postgres: 0=Domingo … 6=Sábado
+        weekday_rows = _q(cur, f"""
+            SELECT EXTRACT(DOW FROM fecha_jornada)::int,
+                   COUNT(*)::int,
+                   COALESCE(SUM(micros),0)::bigint,
+                   COUNT(DISTINCT fecha_jornada)::int
+            FROM comps_transacciones WHERE {fw}
+            GROUP BY 1 ORDER BY 1
+        """, fp)
+
+        cur.close()
+    except Exception as exc:
+        app.logger.error("comps/historico error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    return jsonify({
+        "usuarios":     all_usuarios,
+        "categorias":   all_cats,
+        "estados":      all_estados,
+        "kpi": {
+            "total_comps":     kpi_total_comps,
+            "total_monto":     kpi_total_monto,
+            "clientes_unicos": kpi_clientes_unico,
+            "total_coinin":    kpi_total_coinin,
+        },
+        "rows_diario":  [{"fecha":r[0].isoformat() if r[0] else None, "operaciones":r[1], "monto":int(r[2] or 0)} for r in diario_rows],
+        "rows_weekday": [{"dow":r[0], "operaciones":r[1], "monto":int(r[2] or 0), "n_fechas":r[3]} for r in weekday_rows],
+        "rows_mes":     [{"year":r[0],"month":r[1],"mes":r[2],"estado":r[3],"operaciones":r[4],"monto":int(r[5] or 0)} for r in mes_rows],
+        "rows_cat":     [{"categoria":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in cat_rows],
+        "rows_prod":    [{"producto":r[0],"categoria":r[1],"operaciones":r[2],"monto":int(r[3] or 0)} for r in prod_rows],
+        "rows_usuario": [{"usuario":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in usuario_rows],
+        "rows_estado":  [{"estado":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in estado_rows],
+        "rows_cliente": [{"cliente":r[0],"operaciones":r[1],"monto":int(r[2] or 0),"coinin":int(r[3] or 0)} for r in cliente_rows],
     })
 
 
@@ -496,6 +941,121 @@ def api_getnet_dashboard():
     })
 
 
+@app.get("/api/premios/dashboard")
+@require_auth
+def api_premios_dashboard():
+    year  = request.args.get("year",  type=int)
+    month = request.args.get("month", type=int)
+
+    conditions, params = [], []
+    if year:
+        conditions.append("EXTRACT(YEAR  FROM jornada) = %s")
+        params.append(year)
+    if month:
+        conditions.append("EXTRACT(MONTH FROM jornada) = %s")
+        params.append(month)
+    w = " AND ".join(conditions) if conditions else "1=1"
+    p = tuple(params) if params else None
+
+    def _q(cur, sql):
+        cur.execute(sql, p) if p else cur.execute(sql)
+        return cur.fetchall()
+
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+
+        rows_mes = _q(cur, f"""
+            SELECT EXTRACT(YEAR  FROM jornada)::int,
+                   EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada, 'FMMonth YYYY'),
+                   COUNT(*)::int,
+                   SUM(transferencia_final)::bigint
+            FROM premios_transacciones
+            WHERE {w}
+            GROUP BY 1,2,3 ORDER BY 1,2
+        """)
+
+        rows_hora = _q(cur, f"""
+            WITH ph AS (
+                SELECT jornada,
+                       EXTRACT(HOUR FROM fecha)::int       AS hora,
+                       COUNT(*)::int                       AS ops,
+                       SUM(transferencia_final)::bigint    AS monto
+                FROM premios_transacciones WHERE {w}
+                GROUP BY jornada, hora
+            )
+            SELECT hora,
+                   ROUND(AVG(ops),   1)::float,
+                   ROUND(AVG(monto), 0)::bigint
+            FROM ph GROUP BY hora ORDER BY hora
+        """)
+
+        rows_heat = _q(cur, f"""
+            WITH ph AS (
+                SELECT jornada,
+                       EXTRACT(DOW  FROM jornada)::int AS dow,
+                       EXTRACT(HOUR FROM fecha)::int   AS hora,
+                       COUNT(*)::int                   AS ops
+                FROM premios_transacciones WHERE {w}
+                GROUP BY jornada, dow, hora
+            ),
+            nd AS (
+                SELECT dow, COUNT(DISTINCT jornada)::int AS n
+                FROM ph GROUP BY dow
+            )
+            SELECT ph.dow, ph.hora,
+                   ROUND(SUM(ph.ops)::numeric / nd.n, 1)::float
+            FROM ph JOIN nd USING(dow)
+            GROUP BY ph.dow, ph.hora, nd.n
+            ORDER BY ph.dow, ph.hora
+        """)
+
+        meta_row = _q(cur, f"""
+            SELECT MIN(jornada)::text, MAX(jornada)::text,
+                   COUNT(DISTINCT jornada)::int,
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=1 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=2 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=3 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=4 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=5 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=6 THEN jornada END),
+                   COUNT(DISTINCT CASE WHEN EXTRACT(DOW FROM jornada)=0 THEN jornada END)
+            FROM premios_transacciones WHERE {w}
+        """)
+
+        cur.close()
+    except Exception as exc:
+        app.logger.error("premios/dashboard error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    m = meta_row[0] if meta_row else [None] * 10
+    return jsonify({
+        "por_mes": [
+            {"anio": r[0], "mes_num": r[1], "mes_label": r[2],
+             "operaciones": r[3], "monto": int(r[4] or 0)}
+            for r in rows_mes
+        ],
+        "por_hora": [
+            {"hora": r[0], "ops_prom": float(r[1] or 0), "monto_prom": int(r[2] or 0)}
+            for r in rows_hora
+        ],
+        "heatmap": [
+            {"dow": r[0], "hora": r[1], "prom": float(r[2] or 0)}
+            for r in (rows_heat or [])
+        ],
+        "meta": {
+            "fecha_min": m[0], "fecha_max": m[1], "total_jornadas": m[2],
+            "lun": m[3], "mar": m[4], "mie": m[5],
+            "jue": m[6], "vie": m[7], "sab": m[8], "dom": m[9],
+        },
+    })
+
+
 # ── Upload Excel ───────────────────────────────────────────────────
 _UPLOAD_TIPOS    = {"getnet", "premios", "comps", "coinin_mda", "coinin_mdj", "jefatura"}
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -510,7 +1070,8 @@ def _crear_operacion_uid(row) -> str:
     fecha      = pd.to_datetime(row["Fecha"], dayfirst=True).strftime("%Y%m%d%H%M")
     id_cliente = str(row["Id Cliente"]).replace("'", "").strip()
     ultimos_12 = id_cliente[-12:]
-    monto      = int(float(row["Monto"]))
+    monto_raw  = str(row["Monto"]).replace("'", "").strip()
+    monto      = int(float(monto_raw))
     voucher    = str(row["Voucher"]).replace("'", "").strip().zfill(6)
     return f"{fecha}-{ultimos_12}-{monto}-{voucher}"
 
@@ -525,7 +1086,17 @@ def _process_getnet(df: pd.DataFrame, filename: str) -> dict:
     df["jornada"]        = pd.to_datetime(df["Jornada"]).dt.date
     df["fecha"]          = pd.to_datetime(df["Fecha"], dayfirst=True)
     df["id_cliente"]     = df["Id Cliente"].astype(str).str.replace("'", "", regex=False).str.strip()
-    df["monto"]          = df["Monto"].astype(float).astype(int)
+    df["monto_raw"] = df["Monto"].astype(str).str.replace("'", "", regex=False).str.strip()
+    df["monto"]     = pd.to_numeric(df["monto_raw"], errors="coerce")
+    filas_invalidas = df[df["monto"].isna()][["Jornada","Fecha","Id Cliente","Monto"]]
+    if not filas_invalidas.empty:
+        detalle = filas_invalidas.head(5).to_dict("records")
+        raise ValueError(
+            f"{len(filas_invalidas)} fila(s) con valor inválido en columna 'Monto' "
+            f"(p.ej. un ID de cliente copiado por error). "
+            f"Primeras filas problemáticas: {detalle}"
+        )
+    df["monto"] = df["monto"].astype(int)
     df["voucher"]        = df["Voucher"].astype(str).str.replace("'", "", regex=False).str.strip().str.zfill(6)
     df["slot_attendant"] = df["Slot Attendant"].astype(str).str.strip()
     df["validador"]      = df["Validador"].astype(str).str.strip()
@@ -576,8 +1147,239 @@ def _process_getnet(df: pd.DataFrame, filename: str) -> dict:
     }
 
 
+_PREMIOS_REQUIRED_COLS = {
+    "Fecha", "Cliente", "Transferencia Final", "Tipo de Pago",
+}
+# La columna Slot Attendant puede aparecer con typo en algunos archivos
+_PREMIOS_SLOT_TYPOS = {"Slot Attendadnt", "Slot Attedant", "Slot Attendat"}
+
+
+def _process_premios(df: pd.DataFrame, filename: str) -> dict:
+    df = df.copy()
+
+    # Corregir typo conocido en columna Slot Attendant
+    for typo in _PREMIOS_SLOT_TYPOS:
+        if typo in df.columns:
+            df.rename(columns={typo: "Slot Attendant"}, inplace=True)
+            break
+
+    missing = _PREMIOS_REQUIRED_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"Columnas faltantes en el Excel: {sorted(missing)}")
+
+    # Parsear fecha
+    df["fecha"] = pd.to_datetime(df["Fecha"], dayfirst=True)
+
+    # Calcular jornada: hora < 10 → día anterior
+    df["jornada"] = df["fecha"].apply(
+        lambda ts: (ts - pd.Timedelta(days=1)).date() if ts.hour < 10 else ts.date()
+    )
+
+    # Cliente como string limpio
+    df["cliente"] = df["Cliente"].astype(str).str.replace("'", "", regex=False).str.strip()
+
+    # Transferencia Final — validar numérico
+    df["tf_raw"] = df["Transferencia Final"].astype(str).str.replace("'", "", regex=False).str.strip()
+    df["transferencia_final"] = pd.to_numeric(df["tf_raw"], errors="coerce")
+    filas_invalidas = df[df["transferencia_final"].isna()][["Fecha", "Cliente", "Transferencia Final"]]
+    if not filas_invalidas.empty:
+        detalle = filas_invalidas.head(5).to_dict("records")
+        raise ValueError(
+            f"{len(filas_invalidas)} fila(s) con valor inválido en 'Transferencia Final'. "
+            f"Primeras filas problemáticas: {detalle}"
+        )
+    df["transferencia_final"] = df["transferencia_final"].astype(int)
+
+    # Slot Attendant (opcional)
+    if "Slot Attendant" in df.columns:
+        df["slot_attendant"] = df["Slot Attendant"].astype(str).str.strip()
+    else:
+        df["slot_attendant"] = None
+
+    # Tipo de Pago — todos los tipos
+    df["tipo_pago"] = df["Tipo de Pago"].astype(str).str.strip()
+    if df.empty:
+        return {"rows_total": 0, "rows_inserted": 0, "rows_skipped": 0}
+
+    # Generar operacion_uid para deduplicar re-cargas
+    df["operacion_uid"] = (
+        df["fecha"].dt.strftime("%Y%m%d%H%M")
+        + "-" + df["cliente"].str[-12:]
+        + "-" + df["transferencia_final"].astype(str)
+        + "-" + df["tipo_pago"].str[:6]
+    )
+
+    sql = """
+    INSERT INTO premios_transacciones
+        (fecha, jornada, cliente, transferencia_final,
+         slot_attendant, tipo_pago, operacion_uid, archivo_origen)
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+    ON CONFLICT (operacion_uid) DO NOTHING
+    """
+    registros = [
+        (
+            row["fecha"].to_pydatetime(),
+            row["jornada"],
+            row["cliente"],
+            int(row["transferencia_final"]),
+            row["slot_attendant"],
+            row["tipo_pago"],
+            row["operacion_uid"],
+            filename,
+        )
+        for _, row in df.iterrows()
+    ]
+
+    inserted = 0
+    skipped = 0
+    conn = _get_conn()
+    try:
+        cur = conn.cursor()
+        # Pre-consulta de UIDs existentes para evitar duplicados sin depender de ON CONFLICT
+        uids = [r[6] for r in registros]
+        cur.execute(
+            "SELECT operacion_uid FROM premios_transacciones WHERE operacion_uid = ANY(%s)",
+            (uids,),
+        )
+        existentes = {row[0] for row in cur.fetchall()}
+        nuevos = [r for r in registros if r[6] not in existentes]
+        skipped = len(registros) - len(nuevos)
+
+        if nuevos:
+            # INSERT multi-VALUES verdadero (un único round-trip a Neon por chunk).
+            # pg8000.executemany es secuencial y muy lento sobre la red.
+            cols = "(fecha, jornada, cliente, transferencia_final, slot_attendant, tipo_pago, operacion_uid, archivo_origen)"
+            CHUNK = 500
+            for i in range(0, len(nuevos), CHUNK):
+                batch = nuevos[i:i+CHUNK]
+                placeholders = ",".join(["(%s,%s,%s,%s,%s,%s,%s,%s)"] * len(batch))
+                flat = [v for row in batch for v in row]
+                cur.execute(
+                    f"INSERT INTO premios_transacciones {cols} VALUES {placeholders} ON CONFLICT (operacion_uid) DO NOTHING",
+                    flat,
+                )
+            inserted = len(nuevos)
+        conn.commit()
+        cur.close()
+    finally:
+        _put_conn(conn)
+
+    return {
+        "rows_total":    len(registros),
+        "rows_inserted": inserted,
+        "rows_skipped":  skipped,
+    }
+
+
+_COMPS_REQUIRED_COLS = {
+    "Consumo Id", "Fecha Jornada", "Cliente Id", "Nombre Cliente",
+    "Descripcion Cat", "Descripcion Prod", "Micros", "Estado",
+}
+
+
+def _limpiar_txt(v) -> str:
+    if pd.isna(v):
+        return ""
+    return str(v).replace("'", "").strip()
+
+
+def _crear_comps_uid(row) -> str:
+    fecha = pd.to_datetime(row["Fecha Jornada"], dayfirst=True).strftime("%Y%m%d")
+    consumo = _limpiar_txt(row["Consumo Id"])
+    cliente = _limpiar_txt(row["Cliente Id"])
+    return f"COMPS-{fecha}-{consumo}-{cliente}"
+
+
+def _process_comps(df: pd.DataFrame, filename: str) -> dict:
+    df = df.copy()
+
+    missing = _COMPS_REQUIRED_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"Columnas faltantes en el Excel: {sorted(missing)}")
+
+    # Filtrar filas vacías (sin Consumo Id)
+    df = df[df["Consumo Id"].notna()].copy()
+    if df.empty:
+        return {"rows_total": 0, "rows_inserted": 0, "rows_skipped": 0}
+
+    df["comps_uid"]       = df.apply(_crear_comps_uid, axis=1)
+    df["consumo_id"]      = df["Consumo Id"].astype(str).str.replace("'", "", regex=False).str.strip()
+    df["fecha_jornada"]   = pd.to_datetime(df["Fecha Jornada"], dayfirst=True).dt.date
+    df["cliente_id"]      = df["Cliente Id"].astype(str).str.replace("'", "", regex=False).str.strip()
+    df["nombre_cliente"]  = df["Nombre Cliente"].fillna("").astype(str).str.strip()
+    df["descripcion_cat"] = df["Descripcion Cat"].fillna("").astype(str).str.strip()
+    df["descripcion_prod"]= df["Descripcion Prod"].fillna("").astype(str).str.strip()
+    df["micros"]          = pd.to_numeric(df["Micros"], errors="coerce").fillna(0).astype(int)
+    df["estado"]          = df["Estado"].fillna("").astype(str).str.strip()
+    if "Usuario Id" in df.columns:
+        df["usuario_id"] = df["Usuario Id"].astype(str).str.replace("'", "", regex=False).str.strip()
+    else:
+        df["usuario_id"] = ""
+    if "Nombre" in df.columns:
+        df["nombre_usuario"] = df["Nombre"].fillna("").astype(str).str.strip()
+    else:
+        df["nombre_usuario"] = ""
+
+    registros = [
+        (
+            row["comps_uid"],
+            row["consumo_id"],
+            row["fecha_jornada"],
+            row["cliente_id"],
+            row["nombre_cliente"],
+            row["descripcion_cat"],
+            row["descripcion_prod"],
+            int(row["micros"]),
+            row["estado"],
+            row["usuario_id"],
+            row["nombre_usuario"],
+            filename,
+        )
+        for _, row in df.iterrows()
+    ]
+
+    inserted = 0
+    skipped  = 0
+    conn = _get_conn()
+    try:
+        cur = conn.cursor()
+        uids = [r[0] for r in registros]
+        cur.execute(
+            "SELECT comps_uid FROM comps_transacciones WHERE comps_uid = ANY(%s)",
+            (uids,),
+        )
+        existentes = {row[0] for row in cur.fetchall()}
+        nuevos = [r for r in registros if r[0] not in existentes]
+        skipped = len(registros) - len(nuevos)
+
+        if nuevos:
+            cols = "(comps_uid, consumo_id, fecha_jornada, cliente_id, nombre_cliente, descripcion_cat, descripcion_prod, micros, estado, usuario_id, nombre_usuario, archivo_origen)"
+            CHUNK = 500
+            for i in range(0, len(nuevos), CHUNK):
+                batch = nuevos[i:i+CHUNK]
+                placeholders = ",".join(["(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"] * len(batch))
+                flat = [v for row in batch for v in row]
+                cur.execute(
+                    f"INSERT INTO comps_transacciones {cols} VALUES {placeholders} ON CONFLICT (comps_uid) DO NOTHING",
+                    flat,
+                )
+            inserted = len(nuevos)
+        conn.commit()
+        cur.close()
+    finally:
+        _put_conn(conn)
+
+    return {
+        "rows_total":    len(registros),
+        "rows_inserted": inserted,
+        "rows_skipped":  skipped,
+    }
+
+
 _PROCESSORS = {
-    "getnet": _process_getnet,
+    "getnet":  _process_getnet,
+    "premios": _process_premios,
+    "comps":   _process_comps,
 }
 
 
@@ -603,15 +1405,21 @@ def api_upload(tipo: str):
         return jsonify({"error": f"Procesador para '{tipo}' aún no implementado."}), 501
 
     try:
+        # dtype hints: getnet usa 'Id Cliente'/'Voucher'; premios usa 'Cliente'; comps tiene IDs largos
+        dtype_map = {
+            "Id Cliente": str, "Voucher": str, "Cliente": str,
+            "Consumo Id": str, "Cliente Id": str, "Usuario Id": str,
+        }
+        header_row = 7 if tipo == "comps" else 1
         df = pd.read_excel(
             BytesIO(raw),
-            sheet_name="Sheet1",
-            header=1,
-            dtype={"Id Cliente": str, "Voucher": str},
+            sheet_name=0,   # primera hoja sin importar el nombre
+            header=header_row,
+            dtype=dtype_map,
         )
     except Exception as exc:
         app.logger.error("Error leyendo Excel '%s': %s", filename, exc)
-        return jsonify({"error": "No se pudo leer el archivo Excel. Verifica el formato."}), 422
+        return jsonify({"error": f"No se pudo leer el archivo Excel: {exc}"}), 422
 
     try:
         result = _PROCESSORS[tipo](df, filename)

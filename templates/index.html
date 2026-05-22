@@ -67,7 +67,7 @@
         <select id="yearFilter" class="field-control">
           <option value="">Todos</option>
           <option value="2024">2024</option>
-          <option value="2025" selected>2025</option>
+          <option value="2025">2025</option>
           <option value="2026">2026</option>
           <option value="2027">2027</option>
         </select>
@@ -130,12 +130,30 @@
 
       <!-- ── Panel: Resumen ─────────────────────────────────── -->
       <div id="panel-resumen" class="tab-panel cds--grid">
-        <section class="resumen-section" aria-label="Resumen de cargas">
+        <section class="resumen-section" aria-label="Resumen de cargas Getnet">
           <div class="section-title">
             <p class="eyebrow">Getnet</p>
             <h2>Estado de carga</h2>
           </div>
           <div class="resumen-cards" id="resumenGetnet">
+            <p class="resumen-loading">Consultando base de datos…</p>
+          </div>
+        </section>
+        <section class="resumen-section" aria-label="Resumen de cargas Premios">
+          <div class="section-title">
+            <p class="eyebrow">Premios</p>
+            <h2>Estado de carga</h2>
+          </div>
+          <div class="resumen-cards" id="resumenPremios">
+            <p class="resumen-loading">Consultando base de datos…</p>
+          </div>
+        </section>
+        <section class="resumen-section" aria-label="Resumen de cargas Comps">
+          <div class="section-title">
+            <p class="eyebrow">Comps</p>
+            <h2>Estado de carga</h2>
+          </div>
+          <div class="resumen-cards" id="resumenComps">
             <p class="resumen-loading">Consultando base de datos…</p>
           </div>
         </section>
@@ -235,7 +253,7 @@
           </div>
 
           <!-- ③ Record Asistentes -->
-          <div class="gnh-acc">
+          <div class="gnh-acc" data-open="true">
             <button class="gnh-acc-header" type="button">
               <div class="gnh-acc-header__left">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -264,13 +282,16 @@
           </div>
 
           <!-- ④ Asistente por Mes -->
-          <div class="gnh-acc">
+          <div class="gnh-acc" data-open="true">
             <button class="gnh-acc-header" type="button">
               <div class="gnh-acc-header__left">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Asistente por Mes
               </div>
               <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totAttMes"> Totales
+                </label>
                 <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             </button>
@@ -284,6 +305,7 @@
                     <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
                   </tr></thead>
                   <tbody id="bodyAttMes"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footAttMes" hidden></tfoot>
                 </table>
               </div>
             </div>
@@ -304,16 +326,22 @@
               </div>
             </button>
             <div class="gnh-acc-body">
-              <div class="gnh-table-wrap">
-                <table class="gnh-table" id="tblConteo">
-                  <thead><tr>
-                    <th class="gnh-th sortable" data-col="categoria">Forma de Pago <span class="sort-icon">↕</span></th>
-                    <th class="gnh-th sortable numeric" data-col="operaciones">Operaciones <span class="sort-icon">↕</span></th>
-                    <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
-                  </tr></thead>
-                  <tbody id="bodyConteo"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
-                  <tfoot id="footConteo" hidden></tfoot>
-                </table>
+              <div class="gnh-conteo-split">
+                <div class="gnh-table-wrap">
+                  <table class="gnh-table" id="tblConteo">
+                    <thead><tr>
+                      <th class="gnh-th sortable" data-col="categoria">Forma de Pago <span class="sort-icon">⇕</span></th>
+                      <th class="gnh-th sortable numeric" data-col="operaciones">Operaciones <span class="sort-icon">⇕</span></th>
+                      <th class="gnh-th numeric" data-col="pct_ops">%</th>
+                      <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">⇕</span></th>
+                    </tr></thead>
+                    <tbody id="bodyConteo"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                    <tfoot id="footConteo" hidden></tfoot>
+                  </table>
+                </div>
+                <div class="gnh-conteo-chart">
+                  <canvas id="chartConteo"></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -326,9 +354,6 @@
                 Total de conteo anual por asistente
               </div>
               <div class="gnh-acc-header__right">
-                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
-                  <input type="checkbox" class="gnh-tot-chk" id="totAnual"> Totales
-                </label>
                 <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             </button>
@@ -441,9 +466,634 @@
 
       </div>
 
+      <!-- ── Panel: Premios ──────────────────────────────────── -->
+      <div id="panel-premios" class="tab-panel cds--grid" hidden>
+
+        <!-- ── Sub-nav ──────────────────────────────────────────── -->
+        <nav class="gn-subnav" aria-label="Vistas Premios">
+          <button class="pn-subnav__btn active" data-pnview="historico" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Histórico
+          </button>
+          <button class="pn-subnav__btn" data-pnview="dashboard" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="10" width="4" height="11"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="13" width="4" height="8"/></svg>
+            Dashboard
+          </button>
+        </nav>
+
+        <!-- ── Vista: Histórico ─────────────────────────────────── -->
+        <div id="pnViewHistorico">
+
+          <!-- Filtro Slot Attendant -->
+          <div class="gnh-att-filter" id="pnAttFilter">
+            <div class="gnh-att-filter__head">
+              <span class="gnh-att-filter__label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Slot Attendant
+              </span>
+              <div class="gnh-att-filter__actions">
+                <button class="gnh-att-btn" id="pnAttAll"  type="button">Todos</button>
+                <button class="gnh-att-btn" id="pnAttNone" type="button">Ninguno</button>
+              </div>
+            </div>
+            <div class="gnh-att-checks" id="pnAttChecks">
+              <span class="resumen-loading">Cargando…</span>
+            </div>
+          </div>
+
+          <!-- Filtro Tipo de Pago -->
+          <div class="gnh-att-filter" id="pnTipoFilter">
+            <div class="gnh-att-filter__head">
+              <span class="gnh-att-filter__label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8"/></svg>
+                Tipo de Pago
+              </span>
+              <div class="gnh-att-filter__actions">
+                <button class="gnh-att-btn" id="pnTipoAll"  type="button">Todos</button>
+                <button class="gnh-att-btn" id="pnTipoNone" type="button">Ninguno</button>
+              </div>
+            </div>
+            <div class="gnh-att-checks" id="pnTipoChecks">
+              <span class="resumen-loading">Cargando…</span>
+            </div>
+          </div>
+
+          <!-- ① Resumen Mensual -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Resumen Mensual
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totPnMes"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblPnMes">
+                  <thead id="headPnMes"><tr>
+                    <th class="gnh-th sortable" data-col="mes">Mes <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Premios <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyPnMes"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footPnMes" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ② Premios por Hora -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Premios por Hora
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totPnHora"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblPnHora">
+                  <thead id="headPnHora"><tr>
+                    <th class="gnh-th sortable" data-col="hora">Hora <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Premios <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyPnHora"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footPnHora" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ Record Asistentes -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                Record Asistentes
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totPnRecord"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblPnRecord">
+                  <thead id="headPnRecord"><tr>
+                    <th class="gnh-th sortable" data-col="attendant">Asistente <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Premios <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyPnRecord"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footPnRecord" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ④ Asistente por Mes -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Asistente por Mes
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totPnAttMes"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblPnAttMes">
+                  <thead id="headPnAttMes"><tr>
+                    <th class="gnh-th sortable" data-col="attendant">Asistente <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable" data-col="mes">Mes <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Premios <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyPnAttMes"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footPnAttMes" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑤ Tipo de Pago -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="10" width="4" height="11"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="13" width="4" height="8"/></svg>
+                Tipo de Pago
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totPnTipo"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-conteo-split">
+                <div class="gnh-table-wrap">
+                  <table class="gnh-table" id="tblPnTipo">
+                    <thead><tr>
+                      <th class="gnh-th sortable" data-col="categoria">Tipo de Pago <span class="sort-icon">⇕</span></th>
+                      <th class="gnh-th sortable numeric" data-col="operaciones">Premios <span class="sort-icon">⇕</span></th>
+                      <th class="gnh-th numeric" data-col="pct_ops">%</th>
+                      <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">⇕</span></th>
+                    </tr></thead>
+                    <tbody id="bodyPnTipo"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                    <tfoot id="footPnTipo" hidden></tfoot>
+                  </table>
+                </div>
+                <div class="gnh-conteo-chart">
+                  <canvas id="chartPnTipo"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑥ Total anual por asistente -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Total anual por asistente
+              </div>
+              <div class="gnh-acc-header__right">
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblPnAnual">
+                  <thead id="headPnAnual"><tr>
+                    <th class="gnh-th sortable" data-col="attendant">Asistente <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="year">Año <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Premios <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Monto <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyPnAnual"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footPnAnual" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑦ Conteo Operaciones (pivot por tipo) -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                Conteo Operaciones
+              </div>
+              <div class="gnh-acc-header__right">
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap" id="conteoWrap">
+                <table class="gnh-table" id="tblPnConteo">
+                  <thead id="headPnConteo"><tr><th class="gnh-th">Mes</th><th class="gnh-th">Asistente</th></tr></thead>
+                  <tbody id="bodyPnConteo"><tr><td colspan="2" class="gnh-empty">Cargando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /pnViewHistorico -->
+
+        <!-- ── Vista: Dashboard (gráficos) ──────────────────────── -->
+        <div id="pnViewDashboard" hidden>
+
+          <section class="gn-header">
+            <div class="gn-header__title">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <circle cx="16" cy="16" r="13" stroke="var(--cds-interactive)" stroke-width="1.5"/>
+                <path d="M16 16 L16 3 A13 13 0 0 1 27.3 22.5 Z" fill="var(--cds-interactive)" opacity="0.9"/>
+                <path d="M16 16 L27.3 22.5 A13 13 0 0 1 4.7 22.5 Z" fill="var(--cds-interactive)" opacity="0.55"/>
+                <path d="M16 16 L4.7 22.5 A13 13 0 0 1 16 3 Z" fill="var(--cds-interactive)" opacity="0.28"/>
+              </svg>
+              <h1>Dashboard Premios</h1>
+            </div>
+            <div class="gn-header__meta">
+              <span>Año activo:</span>
+              <strong id="pnYearLabel">Todos</strong>
+            </div>
+          </section>
+
+          <section class="gn-legend">
+            <p class="gn-legend__head">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Leyenda de cálculos
+            </p>
+            <div class="gn-legend__grid">
+              <div><strong>Base de datos</strong><p>Premios usa las filas históricas de tipo Jackpot HP y Progressive Jackpot HP. El filtro de año limita todos los gráficos.</p></div>
+              <div><strong>Premios por Mes</strong><p>Cuenta premios válidos agrupados por Mes.</p></div>
+              <div><strong>Montos por Mes</strong><p>Suma Transferencia Final agrupada por Mes.</p></div>
+              <div><strong>Promedios por Hora</strong><p>Agrupa por Hora en jornada 10:00 a 08:00 y divide entre jornadas únicas del periodo.</p></div>
+              <div><strong>Mapa de calor</strong><p>Cada celda Día × Hora divide el total de premios entre la cantidad de jornadas de ese día de la semana.</p></div>
+            </div>
+          </section>
+
+          <div class="gn-charts-row">
+            <div class="gn-chart-card">
+              <div class="gn-chart-card__head">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><rect x="3" y="10" width="4" height="11"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="13" width="4" height="8"/></svg>
+                <h2>Premios por Mes</h2>
+              </div>
+              <div class="gn-chart-card__body"><canvas id="chartPnOpsMes"></canvas></div>
+            </div>
+            <div class="gn-chart-card">
+              <div class="gn-chart-card__head">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                <h2>Montos por Mes</h2>
+              </div>
+              <div class="gn-chart-card__body"><canvas id="chartPnMontosMes"></canvas></div>
+            </div>
+          </div>
+
+          <div class="gn-charts-row">
+            <div class="gn-chart-card">
+              <div class="gn-chart-card__head">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <h2>Premios por Hora <em>(Promedio)</em></h2>
+              </div>
+              <div class="gn-chart-card__body"><canvas id="chartPnOpsHora"></canvas></div>
+            </div>
+            <div class="gn-chart-card">
+              <div class="gn-chart-card__head">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <h2>Montos por Hora <em>(Promedio)</em></h2>
+              </div>
+              <div class="gn-chart-card__body"><canvas id="chartPnMontosHora"></canvas></div>
+            </div>
+          </div>
+
+          <div class="gn-chart-card gn-full-card">
+            <div class="gn-chart-card__head">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cds-interactive)" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+              <h2>Mapa de Calor &middot; Día &times; Hora <span class="gn-badge">Promedio</span></h2>
+            </div>
+            <p class="gn-heatmap-info">
+              <em>¿Cómo se calcula el promedio?</em> Cada celda muestra el <em>promedio por jornada</em>: se suman todos los premios ocurridos en esa franja horaria de ese día de la semana y se dividen entre la cantidad de fechas únicas de ese día presentes en los datos.
+            </p>
+            <div class="gn-heatmap-meta" id="pnHeatmapMeta"></div>
+            <div class="gn-heatmap-wrap" id="pnHeatmap"><p class="gn-empty">Cargando…</p></div>
+          </div>
+
+        </div><!-- /pnViewDashboard -->
+
+      </div>
+
       <!-- ── Paneles pendientes ─────────────────────────────── -->
-      <div id="panel-premios"  class="tab-panel cds--grid" hidden><p class="placeholder-msg">Módulo Premios — próximamente</p></div>
-      <div id="panel-comps"    class="tab-panel cds--grid" hidden><p class="placeholder-msg">Módulo Comps — próximamente</p></div>
+      <div id="panel-comps"    class="tab-panel cds--grid" hidden>
+
+        <!-- ── Sub-nav ──────────────────────────────────────────── -->
+        <nav class="gn-subnav" aria-label="Vistas Comps">
+          <button class="cp-subnav__btn active" data-cpview="historico" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Histórico
+          </button>
+        </nav>
+
+        <div id="cpViewHistorico">
+
+          <!-- ── KPIs ───────────────────────────────────────────── -->
+          <div class="cp-kpi-grid" id="cpKpis">
+            <div class="cp-kpi-card">
+              <div class="cp-kpi-label">Total Cortesías</div>
+              <div class="cp-kpi-value cp-kpi--blue"  id="cpKpiTotal">—</div>
+            </div>
+            <div class="cp-kpi-card">
+              <div class="cp-kpi-label">Monto Total</div>
+              <div class="cp-kpi-value cp-kpi--green" id="cpKpiMonto">—</div>
+            </div>
+            <div class="cp-kpi-card">
+              <div class="cp-kpi-label">Clientes Únicos</div>
+              <div class="cp-kpi-value cp-kpi--gold"  id="cpKpiClientes">—</div>
+            </div>
+            <div class="cp-kpi-card">
+              <div class="cp-kpi-label">Coin-In Total</div>
+              <div class="cp-kpi-value cp-kpi--red"   id="cpKpiCoinin">—</div>
+            </div>
+          </div>
+
+          <!-- ── Cortesías por Día ──────────────────────────────── -->
+          <div class="gn-chart-card cp-chart-spaced">
+            <div class="gn-chart-card__head"><h2>Cortesías por Día</h2></div>
+            <div class="gn-chart-card__body"><canvas id="chartCpDiario"></canvas></div>
+          </div>
+
+          <!-- ── Promedio por día de la semana ─────────────────── -->
+          <div class="gn-chart-card cp-chart-spaced">
+            <div class="gn-chart-card__head">
+              <h2>Promedio de Cortesías por Día de la Semana <span class="gn-badge">Promedio</span></h2>
+            </div>
+            <div class="gn-chart-card__body">
+              <div class="cp-info-note">
+                <strong>¿Cómo se calcula?</strong> Se suma el monto total de cortesías de cada día de la semana en el rango filtrado y se divide entre la cantidad de fechas únicas de ese día.
+              </div>
+              <div class="cp-weekday-tags" id="cpWeekdayTags"></div>
+              <canvas id="chartCpWeekday"></canvas>
+            </div>
+          </div>
+
+          <!-- Filtro Usuario -->
+          <div class="gnh-att-filter" id="cpUsuarioFilter">
+            <div class="gnh-att-filter__head">
+              <span class="gnh-att-filter__label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Usuario
+              </span>
+              <div class="gnh-att-filter__actions">
+                <button class="gnh-att-btn" id="cpUsuarioAll"  type="button">Todos</button>
+                <button class="gnh-att-btn" id="cpUsuarioNone" type="button">Ninguno</button>
+              </div>
+            </div>
+            <div class="gnh-att-checks" id="cpUsuarioChecks">
+              <span class="resumen-loading">Cargando…</span>
+            </div>
+          </div>
+
+          <!-- Filtro Categoría -->
+          <div class="gnh-att-filter" id="cpCatFilter">
+            <div class="gnh-att-filter__head">
+              <span class="gnh-att-filter__label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Categoría
+              </span>
+              <div class="gnh-att-filter__actions">
+                <button class="gnh-att-btn" id="cpCatAll"  type="button">Todos</button>
+                <button class="gnh-att-btn" id="cpCatNone" type="button">Ninguno</button>
+              </div>
+            </div>
+            <div class="gnh-att-checks" id="cpCatChecks">
+              <span class="resumen-loading">Cargando…</span>
+            </div>
+          </div>
+
+          <!-- Filtro Estado -->
+          <div class="gnh-att-filter" id="cpEstadoFilter">
+            <div class="gnh-att-filter__head">
+              <span class="gnh-att-filter__label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Estado
+              </span>
+              <div class="gnh-att-filter__actions">
+                <button class="gnh-att-btn" id="cpEstadoAll"  type="button">Todos</button>
+                <button class="gnh-att-btn" id="cpEstadoNone" type="button">Ninguno</button>
+              </div>
+            </div>
+            <div class="gnh-att-checks" id="cpEstadoChecks">
+              <span class="resumen-loading">Cargando…</span>
+            </div>
+          </div>
+
+          <!-- ① Resumen Mensual -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Resumen Mensual
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totCpMes"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblCpMes">
+                  <thead id="headCpMes"><tr>
+                    <th class="gnh-th sortable" data-col="mes">Mes <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Comps <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Micros <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyCpMes"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footCpMes" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ② Comps por Categoría -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Comps por Categoría
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totCpCat"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-conteo-split">
+                <div class="gnh-table-wrap">
+                  <table class="gnh-table" id="tblCpCat">
+                    <thead><tr>
+                      <th class="gnh-th sortable" data-col="categoria">Categoría <span class="sort-icon">⇕</span></th>
+                      <th class="gnh-th sortable numeric" data-col="operaciones">Comps <span class="sort-icon">⇕</span></th>
+                      <th class="gnh-th numeric" data-col="pct_ops">%</th>
+                      <th class="gnh-th sortable numeric" data-col="monto">Micros <span class="sort-icon">⇕</span></th>
+                    </tr></thead>
+                    <tbody id="bodyCpCat"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                    <tfoot id="footCpCat" hidden></tfoot>
+                  </table>
+                </div>
+                <div class="gnh-conteo-chart">
+                  <canvas id="chartCpCat"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ Comps por Producto -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                Comps por Producto
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totCpProd"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblCpProd">
+                  <thead id="headCpProd"><tr>
+                    <th class="gnh-th sortable" data-col="producto">Producto <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable" data-col="categoria">Categoría <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Comps <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Micros <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyCpProd"><tr><td colspan="4" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footCpProd" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ④ Comps por Usuario -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Comps por Usuario
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totCpUsuario"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblCpUsuario">
+                  <thead id="headCpUsuario"><tr>
+                    <th class="gnh-th sortable" data-col="usuario">Usuario <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Comps <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Micros <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyCpUsuario"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footCpUsuario" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑤ Estado -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Comps por Estado
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totCpEstado"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblCpEstado">
+                  <thead id="headCpEstado"><tr>
+                    <th class="gnh-th sortable" data-col="estado">Estado <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Comps <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Micros <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyCpEstado"><tr><td colspan="3" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footCpEstado" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑥ Top Clientes -->
+          <div class="gnh-acc" data-open="true">
+            <button class="gnh-acc-header" type="button">
+              <div class="gnh-acc-header__left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                Resumen por Jugador
+              </div>
+              <div class="gnh-acc-header__right">
+                <label class="gnh-tot-lbl" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="gnh-tot-chk" id="totCpCliente"> Totales
+                </label>
+                <svg class="gnh-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </button>
+            <div class="gnh-acc-body">
+              <div class="gnh-table-wrap">
+                <table class="gnh-table" id="tblCpCliente">
+                  <thead id="headCpCliente"><tr>
+                    <th class="gnh-th sortable" data-col="cliente">Nombre <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable" data-col="nivel">Nivel <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="operaciones">Cortesías <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="monto">Monto Cortesías <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="coinin">Coin-In Total <span class="sort-icon">↕</span></th>
+                    <th class="gnh-th sortable numeric" data-col="pct">% Cortesía/Coin-In <span class="sort-icon">↕</span></th>
+                  </tr></thead>
+                  <tbody id="bodyCpCliente"><tr><td colspan="6" class="gnh-empty">Cargando…</td></tr></tbody>
+                  <tfoot id="footCpCliente" hidden></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /cpViewHistorico -->
+
+      </div>
       <div id="panel-analisis" class="tab-panel cds--grid" hidden><p class="placeholder-msg">Análisis general — próximamente</p></div>
       <div id="panel-control"  class="tab-panel cds--grid" hidden><p class="placeholder-msg">Control — próximamente</p></div>
       <div id="panel-coinin"   class="tab-panel cds--grid" hidden><p class="placeholder-msg">CoinIn Cero — próximamente</p></div>
