@@ -1269,8 +1269,10 @@ function activateCpView(view) {
     b.classList.toggle('active', b.dataset.cpview === view)
   );
   const vHist = document.getElementById('cpViewHistorico');
+  const vDash = document.getElementById('cpViewDashboard');
   if (vHist) vHist.hidden = (view !== 'historico');
-  if (view === 'historico') loadCpHistorico();
+  if (vDash) vDash.hidden = (view !== 'dashboard');
+  loadCpHistorico();
 }
 
 function _cpChecked(containerId, cls) {

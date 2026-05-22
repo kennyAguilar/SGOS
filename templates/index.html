@@ -812,9 +812,14 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Histórico
           </button>
+          <button class="cp-subnav__btn" data-cpview="dashboard" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="10" width="4" height="11"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="13" width="4" height="8"/></svg>
+            Dashboard
+          </button>
         </nav>
 
-        <div id="cpViewHistorico">
+        <!-- ── Vista: Dashboard ──────────────────────────────────── -->
+        <div id="cpViewDashboard" hidden>
 
           <!-- ── KPIs ───────────────────────────────────────────── -->
           <div class="cp-kpi-grid" id="cpKpis">
@@ -855,6 +860,11 @@
               <canvas id="chartCpWeekday"></canvas>
             </div>
           </div>
+
+        </div><!-- /cpViewDashboard -->
+
+        <!-- ── Vista: Histórico ──────────────────────────────────── -->
+        <div id="cpViewHistorico">
 
           <!-- Filtro Usuario -->
           <div class="gnh-att-filter" id="cpUsuarioFilter">
