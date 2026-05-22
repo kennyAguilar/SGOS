@@ -62,6 +62,15 @@ const DOW_NAMES     = { 0:"Domingo", 1:"Lunes", 2:"Martes", 3:"Miércoles", 4:"J
 const DOW_ORDER     = [1,2,3,4,5,6,0];
 let gnCharts        = {};
 
+/* Reemplaza el canvas con uno nuevo para evitar "Canvas already in use" de Chart.js */
+function freshCanvas(id) {
+  const old    = document.getElementById(id);
+  const canvas = document.createElement("canvas");
+  canvas.id    = id;
+  old.replaceWith(canvas);
+  return canvas;
+}
+
 function gnScales(opts = {}) {
   return {
     x: { ticks: { color:"#c6c6c6", maxRotation:45, minRotation:30 }, grid: { color:"#393939" } },
@@ -94,7 +103,7 @@ function renderGetnetDashboard({ por_mes, por_hora, heatmap, meta }) {
   const baseOpts = { responsive:true, maintainAspectRatio:false,
                      plugins:{ legend:{ labels:{ color:"#c6c6c6" } } } };
 
-  gnCharts.opsMes = new Chart(document.getElementById("chartOpsMes"), {
+  gnCharts.opsMes = new Chart(freshCanvas("chartOpsMes"), {
     type: "bar",
     data: { labels: por_mes.map(r => r.mes_label),
             datasets: [{ label:"Operaciones", data: por_mes.map(r => r.ops),
@@ -102,7 +111,7 @@ function renderGetnetDashboard({ por_mes, por_hora, heatmap, meta }) {
     options: { ...baseOpts, scales: gnScales() },
   });
 
-  gnCharts.montosMes = new Chart(document.getElementById("chartMontosMes"), {
+  gnCharts.montosMes = new Chart(freshCanvas("chartMontosMes"), {
     type: "line",
     data: { labels: por_mes.map(r => r.mes_label),
             datasets: [{ label:"Monto Total", data: por_mes.map(r => r.monto),
@@ -114,7 +123,7 @@ function renderGetnetDashboard({ por_mes, por_hora, heatmap, meta }) {
   const horaMap   = new Map(por_hora.map(r => [r.hora, r]));
   const horasSort = JORNADA_HOURS.filter(h => horaMap.has(h));
 
-  gnCharts.opsHora = new Chart(document.getElementById("chartOpsHora"), {
+  gnCharts.opsHora = new Chart(freshCanvas("chartOpsHora"), {
     type: "bar",
     data: { labels: horasSort,
             datasets: [{ label:"Promedio Operaciones", data: horasSort.map(h => horaMap.get(h).prom_ops),
@@ -122,7 +131,7 @@ function renderGetnetDashboard({ por_mes, por_hora, heatmap, meta }) {
     options: { ...baseOpts, scales: gnScales() },
   });
 
-  gnCharts.montosHora = new Chart(document.getElementById("chartMontosHora"), {
+  gnCharts.montosHora = new Chart(freshCanvas("chartMontosHora"), {
     type: "line",
     data: { labels: horasSort,
             datasets: [{ label:"Promedio Monto ($)", data: horasSort.map(h => horaMap.get(h).prom_monto),
