@@ -158,15 +158,40 @@
 
         <!-- ── Vista: Histórico ─────────────────────────────────── -->
         <div id="gnViewHistorico">
-          <section class="resumen-section" aria-label="Histórico Getnet">
-            <div class="section-title">
-              <p class="eyebrow">Getnet</p>
-              <h2>Histórico de cargas</h2>
+
+          <!-- Filtro attendants -->
+          <div class="gnh-att-filter" id="gnAttFilter">
+            <div class="gnh-att-filter__head">
+              <span class="gnh-att-filter__label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Slot Attendant
+              </span>
+              <div class="gnh-att-filter__actions">
+                <button class="gnh-att-btn" id="gnAttAll"  type="button">Todos</button>
+                <button class="gnh-att-btn" id="gnAttNone" type="button">Ninguno</button>
+              </div>
             </div>
-            <div class="resumen-cards" id="gnHistoricoCards">
-              <p class="resumen-loading">Cargando…</p>
+            <div class="gnh-att-checks" id="gnAttChecks">
+              <span class="resumen-loading">Cargando…</span>
             </div>
-          </section>
+          </div>
+
+          <!-- Tabla mensual -->
+          <div class="gnh-table-wrap">
+            <table class="gnh-table" id="gnHistTable">
+              <thead>
+                <tr>
+                  <th data-col="mes"         class="gnh-th sortable">Mes <span class="sort-icon">↕</span></th>
+                  <th data-col="operaciones" class="gnh-th sortable numeric">Operaciones <span class="sort-icon">↕</span></th>
+                  <th data-col="monto"       class="gnh-th sortable numeric">Monto <span class="sort-icon">↕</span></th>
+                </tr>
+              </thead>
+              <tbody id="gnHistBody">
+                <tr><td colspan="3" class="gnh-empty">Cargando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
         </div>
 
         <!-- ── Vista: Dashboard (gráficos) ──────────────────────── -->

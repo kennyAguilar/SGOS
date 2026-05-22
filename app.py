@@ -222,6 +222,76 @@ def api_health():
     return jsonify({"status": "ok", "ts": datetime.now(timezone.utc).isoformat()})
 
 
+@app.get("/api/getnet/historico")
+@require_auth
+def api_getnet_historico():
+    year       = request.args.get("year",       type=int)
+    month      = request.args.get("month",      type=int)
+    attendants = request.args.get("attendants", "")   # CSV, vacío = todos
+
+    # Condiciones base (año/mes)
+    base_conds, base_params = [], []
+    if year:
+        base_conds.append("EXTRACT(YEAR  FROM jornada) = %s"); base_params.append(year)
+    if month:
+        base_conds.append("EXTRACT(MONTH FROM jornada) = %s"); base_params.append(month)
+    bw = " AND ".join(base_conds) if base_conds else "1=1"
+    bp = tuple(base_params) if base_params else None
+
+    # Condiciones con attendant
+    att_list = [a.strip() for a in attendants.split(",") if a.strip()] if attendants else []
+    if att_list:
+        ph = ",".join(["%s"] * len(att_list))
+        full_conds  = base_conds  + [f"slot_attendant IN ({ph})"]
+        full_params = base_params + att_list
+    else:
+        full_conds, full_params = base_conds, base_params
+    fw = " AND ".join(full_conds) if full_conds else "1=1"
+    fp = tuple(full_params) if full_params else None
+
+    conn = None
+    try:
+        conn = _get_conn()
+        cur  = conn.cursor()
+
+        # Attendants únicos (solo filtro año/mes, no attendant)
+        q_att = (
+            f"SELECT DISTINCT slot_attendant FROM getnet_transacciones "
+            f"WHERE {bw} AND slot_attendant IS NOT NULL ORDER BY 1"
+        )
+        cur.execute(q_att, bp) if bp else cur.execute(q_att)
+        all_attendants = [r[0] for r in cur.fetchall()]
+
+        # Datos mensuales
+        q_mes = f"""
+            SELECT EXTRACT(YEAR  FROM jornada)::int,
+                   EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada, 'FMMonth YYYY'),
+                   COUNT(*)::int,
+                   SUM(monto)::bigint
+            FROM getnet_transacciones WHERE {fw}
+            GROUP BY 1,2,3 ORDER BY 1,2
+        """
+        cur.execute(q_mes, fp) if fp else cur.execute(q_mes)
+        mes_rows = cur.fetchall()
+        cur.close()
+    except Exception as exc:
+        app.logger.error("getnet/historico error: %s", exc)
+        return jsonify({"error": "Error consultando base de datos."}), 500
+    finally:
+        if conn:
+            _put_conn(conn)
+
+    return jsonify({
+        "attendants": all_attendants,
+        "rows": [
+            {"year": r[0], "month": r[1], "mes": r[2],
+             "operaciones": r[3], "monto": int(r[4]) if r[4] else 0}
+            for r in mes_rows
+        ],
+    })
+
+
 @app.get("/api/resumen/getnet")
 @require_auth
 def api_resumen_getnet():

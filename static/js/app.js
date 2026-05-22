@@ -223,8 +223,10 @@ function activateTab(tabId) {
 tabBtns.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
 /* ── Getnet sub-vistas ────────────────────────────────────────── */
-const gnHistoricoEl = document.getElementById('gnHistoricoCards');
 let gnActiveView    = 'historico';
+let gnHistSort      = { col: 'mes', dir: 1 };  // dir: 1=asc, -1=desc
+let gnHistRows      = [];
+let gnAttLoaded     = false;
 
 function activateGnView(view) {
   gnActiveView = view;
@@ -239,31 +241,111 @@ function activateGnView(view) {
   else                      loadGetnetDashboard();
 }
 
-async function loadGnHistorico() {
-  if (!gnHistoricoEl) return;
-  gnHistoricoEl.innerHTML = '<p class="resumen-loading">Consultando base de datos…</p>';
-  try {
-    const res  = await fetch('/api/resumen/getnet', { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (!res.ok)    { gnHistoricoEl.innerHTML = `<p class="resumen-error">${data.error}</p>`; return; }
-    if (data.empty) { gnHistoricoEl.innerHTML = '<p class="resumen-empty">Sin datos — carga el primer Excel Getnet.</p>'; return; }
-    const metaCarga   = document.getElementById('metaCarga');
-    const metaArchivo = document.getElementById('metaArchivo');
-    if (metaCarga)   metaCarga.textContent   = data.ultima_carga   || '—';
-    if (metaArchivo) metaArchivo.textContent = data.ultimo_archivo || '—';
-    const jornada = new Date(data.ultima_jornada + 'T12:00:00')
-      .toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
-    gnHistoricoEl.innerHTML =
-      '<article class="resumen-card"><span class="rc-label">Mes cargado</span>' +
-      `<strong class="rc-value">${data.ultimo_mes}</strong><small class="rc-sub">${data.ultima_carga}</small></article>` +
-      '<article class="resumen-card"><span class="rc-label">Hasta jornada</span>' +
-      `<strong class="rc-value mono">${jornada}</strong><small class="rc-sub">Última jornada registrada</small></article>` +
-      '<article class="resumen-card rc-highlight"><span class="rc-label">Monto total del mes</span>' +
-      `<strong class="rc-value mono">${clpFmt.format(data.monto_total)}</strong><small class="rc-sub">${data.total_operaciones.toLocaleString('es-CL')} operaciones</small></article>` +
-      '<article class="resumen-card"><span class="rc-label">Última jornada</span>' +
-      `<strong class="rc-value mono">${clpFmt.format(data.monto_ultima_jornada)}</strong><small class="rc-sub">${data.ops_ultima_jornada.toLocaleString('es-CL')} ops · ${jornada}</small></article>`;
-  } catch { gnHistoricoEl.innerHTML = '<p class="resumen-error">Error de conexión al servidor.</p>'; }
+function _gnCheckedAttendants() {
+  return [...document.querySelectorAll('.gnh-att-check:checked')].map(c => c.value);
 }
+
+async function loadGnHistorico() {
+  const body    = document.getElementById('gnHistBody');
+  const checks  = document.getElementById('gnAttChecks');
+  if (!body) return;
+
+  // Construir params (filtro principal + attendants seleccionados)
+  const yr  = yearFilter  ? yearFilter.value  : '';
+  const mo  = monthFilter ? monthFilter.value : '';
+  const att = gnAttLoaded ? _gnCheckedAttendants().join(',') : '';
+
+  const params = new URLSearchParams();
+  if (yr)  params.set('year',  yr);
+  if (mo)  params.set('month', mo);
+  if (att) params.set('attendants', att);
+
+  body.innerHTML = `<tr><td colspan="3" class="gnh-empty">Consultando…</td></tr>`;
+
+  try {
+    const res  = await fetch(`/api/getnet/historico?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!res.ok) { body.innerHTML = `<tr><td colspan="3" class="gnh-empty error">${data.error}</td></tr>`; return; }
+
+    // Renderizar checkboxes solo la primera vez (o si cambia filtro año/mes)
+    if (!gnAttLoaded && checks) {
+      _renderGnAttChecks(data.attendants, checks);
+      gnAttLoaded = true;
+    }
+
+    gnHistRows = data.rows;
+    _renderGnHistTable();
+  } catch {
+    body.innerHTML = `<tr><td colspan="3" class="gnh-empty error">Error de conexión.</td></tr>`;
+  }
+}
+
+function _renderGnAttChecks(attendants, container) {
+  if (!attendants.length) { container.innerHTML = '<span class="gnh-att-empty">Sin datos de attendant</span>'; return; }
+  container.innerHTML = attendants.map(a =>
+    `<label class="gnh-att-item"><input type="checkbox" class="gnh-att-check" value="${a}" checked><span>${a}</span></label>`
+  ).join('');
+}
+
+function _renderGnHistTable() {
+  const body = document.getElementById('gnHistBody');
+  if (!body) return;
+  const { col, dir } = gnHistSort;
+  const sorted = [...gnHistRows].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (col === 'mes') {
+      // orden cronológico usando year+month
+      const ka = a.year * 100 + a.month, kb = b.year * 100 + b.month;
+      return (ka - kb) * dir;
+    }
+    return (va - vb) * dir;
+  });
+
+  if (!sorted.length) {
+    body.innerHTML = `<tr><td colspan="3" class="gnh-empty">Sin datos para los filtros seleccionados.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = sorted.map(r =>
+    `<tr>
+      <td class="gnh-td">${r.mes}</td>
+      <td class="gnh-td numeric">${r.operaciones.toLocaleString('es-CL')}</td>
+      <td class="gnh-td numeric">${clpFmt.format(r.monto)}</td>
+    </tr>`
+  ).join('');
+
+  // Actualizar íconos de ordenamiento
+  document.querySelectorAll('#gnHistTable .gnh-th.sortable').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (!icon) return;
+    if (th.dataset.col === col) icon.textContent = dir === 1 ? '↑' : '↓';
+    else icon.textContent = '↕';
+    th.classList.toggle('sort-active', th.dataset.col === col);
+  });
+}
+
+// Click en headers de tabla para ordenar
+document.querySelectorAll('#gnHistTable .gnh-th.sortable').forEach(th =>
+  th.addEventListener('click', () => {
+    const c = th.dataset.col;
+    gnHistSort.dir = (gnHistSort.col === c) ? gnHistSort.dir * -1 : 1;
+    gnHistSort.col = c;
+    _renderGnHistTable();
+  })
+);
+
+// Todos / Ninguno attendants
+document.getElementById('gnAttAll')?.addEventListener('click', () => {
+  document.querySelectorAll('.gnh-att-check').forEach(c => c.checked = true);
+  loadGnHistorico();
+});
+document.getElementById('gnAttNone')?.addEventListener('click', () => {
+  document.querySelectorAll('.gnh-att-check').forEach(c => c.checked = false);
+  loadGnHistorico();
+});
+
+// Re-filtrar al cambiar un checkbox individual
+document.getElementById('gnAttChecks')?.addEventListener('change', () => loadGnHistorico());
 
 document.querySelectorAll('.gn-subnav__btn').forEach(b =>
   b.addEventListener('click', () => activateGnView(b.dataset.gnview))
@@ -520,6 +602,7 @@ nameFilter.addEventListener("input", renderRows);
 applyFilter.addEventListener("click", () => {
   const activeTab = document.querySelector(".header-tab.active")?.dataset.tab;
   if (activeTab === "getnet") {
+    gnAttLoaded = false;   // recargar attendants al cambiar año/mes
     activateGnView(gnActiveView);
   } else {
     renderRows();

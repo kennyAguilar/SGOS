@@ -633,6 +633,104 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 .gn-subnav__btn:hover  { color: var(--cds-text-primary); }
 .gn-subnav__btn.active { color: var(--cds-interactive); border-bottom-color: var(--cds-interactive); font-weight: 600; }
 
+/* ── Getnet Histórico (tabla + filtro attendants) ────────────── */
+.gnh-att-filter {
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  margin-bottom: var(--cds-spacing-05);
+  padding: var(--cds-spacing-04) var(--cds-spacing-05);
+}
+.gnh-att-filter__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--cds-spacing-03);
+}
+.gnh-att-filter__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--cds-text-secondary);
+}
+.gnh-att-filter__actions { display: flex; gap: 6px; }
+.gnh-att-btn {
+  padding: 3px 12px;
+  background: transparent;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 3px;
+  color: var(--cds-text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 100ms, color 100ms;
+}
+.gnh-att-btn:hover { border-color: var(--cds-interactive); color: var(--cds-interactive); }
+.gnh-att-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.gnh-att-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--cds-text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+.gnh-att-check {
+  accent-color: var(--cds-interactive);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.gnh-att-empty { font-size: 13px; color: var(--cds-text-secondary); }
+
+.gnh-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+}
+.gnh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.gnh-th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--cds-text-secondary);
+  background: var(--cds-layer-02);
+  border-bottom: 1px solid var(--cds-border-subtle);
+  white-space: nowrap;
+}
+.gnh-th.sortable { cursor: pointer; }
+.gnh-th.sortable:hover { color: var(--cds-text-primary); }
+.gnh-th.sort-active { color: var(--cds-interactive); }
+.gnh-th.numeric, .gnh-td.numeric { text-align: right; }
+.sort-icon { margin-left: 4px; font-size: 11px; opacity: .6; }
+.gnh-th.sort-active .sort-icon { opacity: 1; }
+.gnh-td {
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  color: var(--cds-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.gnh-table tbody tr:last-child .gnh-td { border-bottom: none; }
+.gnh-table tbody tr:hover .gnh-td { background: var(--cds-layer-01); }
+.gnh-empty { padding: 24px; text-align: center; color: var(--cds-text-secondary); font-size: 13px; }
+.gnh-empty.error { color: var(--cds-support-error, #ff8389); }
+
 /* ── Getnet Dashboard ───────────────────────────────────────── */
 .gn-header {
   display: flex;
