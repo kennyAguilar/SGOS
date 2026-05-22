@@ -144,6 +144,34 @@
       <!-- ── Panel: Getnet (cuadratura) ────────────────────── -->
       <div id="panel-getnet" class="tab-panel cds--grid" hidden>
 
+        <!-- ── Sub-nav ──────────────────────────────────────────── -->
+        <nav class="gn-subnav" aria-label="Vistas Getnet">
+          <button class="gn-subnav__btn active" data-gnview="historico" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Histórico
+          </button>
+          <button class="gn-subnav__btn" data-gnview="dashboard" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="10" width="4" height="11"/><rect x="10" y="5" width="4" height="16"/><rect x="17" y="13" width="4" height="8"/></svg>
+            Dashboard
+          </button>
+        </nav>
+
+        <!-- ── Vista: Histórico ─────────────────────────────────── -->
+        <div id="gnViewHistorico">
+          <section class="resumen-section" aria-label="Histórico Getnet">
+            <div class="section-title">
+              <p class="eyebrow">Getnet</p>
+              <h2>Histórico de cargas</h2>
+            </div>
+            <div class="resumen-cards" id="gnHistoricoCards">
+              <p class="resumen-loading">Cargando…</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── Vista: Dashboard (gráficos) ──────────────────────── -->
+        <div id="gnViewDashboard" hidden>
+
         <!-- ── Header ───────────────────────────────────────────── -->
         <section class="gn-header">
           <div class="gn-header__title">
@@ -227,6 +255,8 @@
           <div class="gn-heatmap-meta" id="gnHeatmapMeta"></div>
           <div class="gn-heatmap-wrap" id="gnHeatmap"><p class="gn-empty">Cargando…</p></div>
         </div>
+
+        </div><!-- /gnViewDashboard -->
 
       </div>
 

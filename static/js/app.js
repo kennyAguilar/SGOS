@@ -217,10 +217,57 @@ function activateTab(tabId) {
     p.hidden = p.id !== `panel-${tabId}`;
   });
   if (tabId === 'resumen') loadResumenGetnet();
-  else if (tabId === 'getnet') loadGetnetDashboard();
+  else if (tabId === 'getnet') activateGnView(gnActiveView);
 }
 
 tabBtns.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+
+/* ── Getnet sub-vistas ────────────────────────────────────────── */
+const gnHistoricoEl = document.getElementById('gnHistoricoCards');
+let gnActiveView    = 'historico';
+
+function activateGnView(view) {
+  gnActiveView = view;
+  document.querySelectorAll('.gn-subnav__btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.gnview === view)
+  );
+  const vHist = document.getElementById('gnViewHistorico');
+  const vDash = document.getElementById('gnViewDashboard');
+  if (vHist) vHist.hidden = (view !== 'historico');
+  if (vDash) vDash.hidden = (view !== 'dashboard');
+  if (view === 'historico') loadGnHistorico();
+  else                      loadGetnetDashboard();
+}
+
+async function loadGnHistorico() {
+  if (!gnHistoricoEl) return;
+  gnHistoricoEl.innerHTML = '<p class="resumen-loading">Consultando base de datos…</p>';
+  try {
+    const res  = await fetch('/api/resumen/getnet', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!res.ok)    { gnHistoricoEl.innerHTML = `<p class="resumen-error">${data.error}</p>`; return; }
+    if (data.empty) { gnHistoricoEl.innerHTML = '<p class="resumen-empty">Sin datos — carga el primer Excel Getnet.</p>'; return; }
+    const metaCarga   = document.getElementById('metaCarga');
+    const metaArchivo = document.getElementById('metaArchivo');
+    if (metaCarga)   metaCarga.textContent   = data.ultima_carga   || '—';
+    if (metaArchivo) metaArchivo.textContent = data.ultimo_archivo || '—';
+    const jornada = new Date(data.ultima_jornada + 'T12:00:00')
+      .toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
+    gnHistoricoEl.innerHTML =
+      '<article class="resumen-card"><span class="rc-label">Mes cargado</span>' +
+      `<strong class="rc-value">${data.ultimo_mes}</strong><small class="rc-sub">${data.ultima_carga}</small></article>` +
+      '<article class="resumen-card"><span class="rc-label">Hasta jornada</span>' +
+      `<strong class="rc-value mono">${jornada}</strong><small class="rc-sub">Última jornada registrada</small></article>` +
+      '<article class="resumen-card rc-highlight"><span class="rc-label">Monto total del mes</span>' +
+      `<strong class="rc-value mono">${clpFmt.format(data.monto_total)}</strong><small class="rc-sub">${data.total_operaciones.toLocaleString('es-CL')} operaciones</small></article>` +
+      '<article class="resumen-card"><span class="rc-label">Última jornada</span>' +
+      `<strong class="rc-value mono">${clpFmt.format(data.monto_ultima_jornada)}</strong><small class="rc-sub">${data.ops_ultima_jornada.toLocaleString('es-CL')} ops · ${jornada}</small></article>`;
+  } catch { gnHistoricoEl.innerHTML = '<p class="resumen-error">Error de conexión al servidor.</p>'; }
+}
+
+document.querySelectorAll('.gn-subnav__btn').forEach(b =>
+  b.addEventListener('click', () => activateGnView(b.dataset.gnview))
+);
 
 /* ── Resumen Getnet ───────────────────────────────── */
 const resumenEl = document.getElementById('resumenGetnet');
@@ -473,7 +520,7 @@ nameFilter.addEventListener("input", renderRows);
 applyFilter.addEventListener("click", () => {
   const activeTab = document.querySelector(".header-tab.active")?.dataset.tab;
   if (activeTab === "getnet") {
-    loadGetnetDashboard();
+    activateGnView(gnActiveView);
   } else {
     renderRows();
   }

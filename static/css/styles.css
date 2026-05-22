@@ -606,6 +606,33 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 }
 .totals-row .numeric { color: var(--cds-interactive); }
 
+/* ── Getnet sub-nav ──────────────────────────────────────────── */
+.gn-subnav {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  margin-bottom: var(--cds-spacing-05);
+  padding-bottom: 0;
+}
+.gn-subnav__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--cds-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms;
+  margin-bottom: -1px;
+}
+.gn-subnav__btn:hover  { color: var(--cds-text-primary); }
+.gn-subnav__btn.active { color: var(--cds-interactive); border-bottom-color: var(--cds-interactive); font-weight: 600; }
+
 /* ── Getnet Dashboard ───────────────────────────────────────── */
 .gn-header {
   display: flex;
