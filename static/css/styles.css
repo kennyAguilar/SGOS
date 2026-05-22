@@ -939,6 +939,8 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 .gn-chart-card__head h2 em   { font-style:normal; color:var(--cds-text-secondary); font-weight:400; font-size:12px; }
 .gn-chart-card__body         { position:relative; height:220px; }
 .gn-chart-card__body canvas  { width:100% !important; height:100% !important; }
+.gn-chart-card__body--tall   { height:300px; }
+.gn-chart-card__body--xl     { height:360px; }
 
 .gn-badge { display:inline-block; background:#4fd1c5; color:#000; font-size:11px; font-weight:600; padding:2px 8px; border-radius:3px; margin-left:var(--cds-spacing-03); }
 
