@@ -276,11 +276,18 @@ def api_resumen_getnet():
 @app.get("/api/getnet/dashboard")
 @require_auth
 def api_getnet_dashboard():
-    year = request.args.get("year", type=int)
+    year  = request.args.get("year",  type=int)
+    month = request.args.get("month", type=int)
+
+    conditions, params = [], []
     if year:
-        w, p = "EXTRACT(YEAR FROM jornada) = %s", (year,)
-    else:
-        w, p = "1=1", None
+        conditions.append("EXTRACT(YEAR  FROM jornada) = %s")
+        params.append(year)
+    if month:
+        conditions.append("EXTRACT(MONTH FROM jornada) = %s")
+        params.append(month)
+    w = " AND ".join(conditions) if conditions else "1=1"
+    p = tuple(params) if params else None
 
     def _q(cur, sql):
         cur.execute(sql, p) if p else cur.execute(sql)

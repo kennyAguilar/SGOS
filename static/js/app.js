@@ -83,10 +83,19 @@ function gnScales(opts = {}) {
 }
 
 async function loadGetnetDashboard() {
-  const year = yearFilter ? yearFilter.value : "";
-  const url  = `/api/getnet/dashboard${year ? `?year=${year}` : ""}`;
-  const lbl  = document.getElementById("gnYearLabel");
-  if (lbl) lbl.textContent = year || "Todos";
+  const year  = yearFilter  ? yearFilter.value  : "";
+  const month = monthFilter ? monthFilter.value : "";
+  const params = new URLSearchParams();
+  if (year)  params.set("year",  year);
+  if (month) params.set("month", month);
+  const url = `/api/getnet/dashboard${params.toString() ? "?" + params : ""}`;
+  const lbl = document.getElementById("gnYearLabel");
+  if (lbl) {
+    const monthName = month && monthFilter
+      ? monthFilter.options[monthFilter.selectedIndex].text
+      : "";
+    lbl.textContent = [year || "Todos", monthName].filter(Boolean).join(" · ");
+  }
   try {
     const res  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
