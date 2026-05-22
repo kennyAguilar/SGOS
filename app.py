@@ -249,31 +249,68 @@ def api_getnet_historico():
     fw = " AND ".join(full_conds) if full_conds else "1=1"
     fp = tuple(full_params) if full_params else None
 
+    def _q(cur, sql, p): cur.execute(sql, p) if p else cur.execute(sql); return cur.fetchall()
+
     conn = None
     try:
         conn = _get_conn()
         cur  = conn.cursor()
 
-        # Attendants únicos (solo filtro año/mes, no attendant)
-        q_att = (
+        # 0. Attendants únicos (solo filtro año/mes)
+        cur.execute(
+            f"SELECT DISTINCT slot_attendant FROM getnet_transacciones "
+            f"WHERE {bw} AND slot_attendant IS NOT NULL ORDER BY 1", bp
+        ) if bp else cur.execute(
             f"SELECT DISTINCT slot_attendant FROM getnet_transacciones "
             f"WHERE {bw} AND slot_attendant IS NOT NULL ORDER BY 1"
         )
-        cur.execute(q_att, bp) if bp else cur.execute(q_att)
         all_attendants = [r[0] for r in cur.fetchall()]
 
-        # Datos mensuales
-        q_mes = f"""
-            SELECT EXTRACT(YEAR  FROM jornada)::int,
-                   EXTRACT(MONTH FROM jornada)::int,
-                   TO_CHAR(jornada, 'FMMonth YYYY'),
-                   COUNT(*)::int,
-                   SUM(monto)::bigint
-            FROM getnet_transacciones WHERE {fw}
-            GROUP BY 1,2,3 ORDER BY 1,2
-        """
-        cur.execute(q_mes, fp) if fp else cur.execute(q_mes)
-        mes_rows = cur.fetchall()
+        # 1. Resumen mensual
+        mes_rows = _q(cur, f"""
+            SELECT EXTRACT(YEAR FROM jornada)::int, EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada,'FMMonth YYYY'), COUNT(*)::int, SUM(monto)::bigint
+            FROM getnet_transacciones WHERE {fw} GROUP BY 1,2,3 ORDER BY 1,2
+        """, fp)
+
+        # 2. Operaciones por hora
+        hora_rows = _q(cur, f"""
+            SELECT EXTRACT(HOUR FROM fecha)::int AS hora,
+                   COUNT(*)::int AS operaciones, SUM(monto)::bigint AS monto
+            FROM getnet_transacciones WHERE {fw} GROUP BY 1 ORDER BY 1
+        """, fp)
+
+        # 3. Record asistentes (ranking)
+        record_rows = _q(cur, f"""
+            SELECT slot_attendant, COUNT(*)::int AS operaciones, SUM(monto)::bigint AS monto
+            FROM getnet_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1 ORDER BY 2 DESC
+        """, fp)
+
+        # 4. Asistente por mes
+        att_mes_rows = _q(cur, f"""
+            SELECT slot_attendant,
+                   EXTRACT(YEAR FROM jornada)::int, EXTRACT(MONTH FROM jornada)::int,
+                   TO_CHAR(jornada,'FMMonth YYYY'), COUNT(*)::int, SUM(monto)::bigint
+            FROM getnet_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1,2,3,4 ORDER BY 1,2,3
+        """, fp)
+
+        # 5. Conteo por forma de pago
+        conteo_rows = _q(cur, f"""
+            SELECT COALESCE(forma_pago,'Sin clasificar') AS categoria,
+                   COUNT(*)::int AS operaciones, SUM(monto)::bigint AS monto
+            FROM getnet_transacciones WHERE {fw} GROUP BY 1 ORDER BY 2 DESC
+        """, fp)
+
+        # 6. Total anual por asistente
+        anual_rows = _q(cur, f"""
+            SELECT slot_attendant, EXTRACT(YEAR FROM jornada)::int AS year,
+                   COUNT(*)::int AS operaciones, SUM(monto)::bigint AS monto
+            FROM getnet_transacciones WHERE {fw} AND slot_attendant IS NOT NULL
+            GROUP BY 1,2 ORDER BY 1,2
+        """, fp)
+
         cur.close()
     except Exception as exc:
         app.logger.error("getnet/historico error: %s", exc)
@@ -284,11 +321,12 @@ def api_getnet_historico():
 
     return jsonify({
         "attendants": all_attendants,
-        "rows": [
-            {"year": r[0], "month": r[1], "mes": r[2],
-             "operaciones": r[3], "monto": int(r[4]) if r[4] else 0}
-            for r in mes_rows
-        ],
+        "rows_mes":    [{"year":r[0],"month":r[1],"mes":r[2],"operaciones":r[3],"monto":int(r[4] or 0)} for r in mes_rows],
+        "rows_hora":   [{"hora":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in hora_rows],
+        "rows_record": [{"attendant":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in record_rows],
+        "rows_att_mes":[{"attendant":r[0],"year":r[1],"month":r[2],"mes":r[3],"operaciones":r[4],"monto":int(r[5] or 0)} for r in att_mes_rows],
+        "rows_conteo": [{"categoria":r[0],"operaciones":r[1],"monto":int(r[2] or 0)} for r in conteo_rows],
+        "rows_anual":  [{"attendant":r[0],"year":int(r[1]),"operaciones":r[2],"monto":int(r[3] or 0)} for r in anual_rows],
     })
 
 

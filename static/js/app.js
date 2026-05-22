@@ -223,10 +223,19 @@ function activateTab(tabId) {
 tabBtns.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
 /* ── Getnet sub-vistas ────────────────────────────────────────── */
-let gnActiveView    = 'historico';
-let gnHistSort      = { col: 'mes', dir: 1 };  // dir: 1=asc, -1=desc
-let gnHistRows      = [];
-let gnAttLoaded     = false;
+let gnActiveView = 'historico';
+let gnAttLoaded  = false;
+let gnHistData   = {};
+
+// sort state per table: tblId → {col, dir}
+const gnSorts = {
+  tblMes:    { col:'mes',        dir:1  },
+  tblHora:   { col:'hora',       dir:1  },
+  tblRecord: { col:'operaciones',dir:-1 },
+  tblAttMes: { col:'attendant',  dir:1  },
+  tblConteo: { col:'operaciones',dir:-1 },
+  tblAnual:  { col:'attendant',  dir:1  },
+};
 
 function activateGnView(view) {
   gnActiveView = view;
@@ -246,37 +255,48 @@ function _gnCheckedAttendants() {
 }
 
 async function loadGnHistorico() {
-  const body    = document.getElementById('gnHistBody');
-  const checks  = document.getElementById('gnAttChecks');
-  if (!body) return;
-
-  // Construir params (filtro principal + attendants seleccionados)
   const yr  = yearFilter  ? yearFilter.value  : '';
   const mo  = monthFilter ? monthFilter.value : '';
   const att = gnAttLoaded ? _gnCheckedAttendants().join(',') : '';
+  const p   = new URLSearchParams();
+  if (yr)  p.set('year',  yr);
+  if (mo)  p.set('month', mo);
+  if (att) p.set('attendants', att);
 
-  const params = new URLSearchParams();
-  if (yr)  params.set('year',  yr);
-  if (mo)  params.set('month', mo);
-  if (att) params.set('attendants', att);
-
-  body.innerHTML = `<tr><td colspan="3" class="gnh-empty">Consultando…</td></tr>`;
+  // Mostrar loading en todos los cuerpos
+  ['bodyMes','bodyHora','bodyRecord','bodyAttMes','bodyConteo','bodyAnual'].forEach(id => {
+    const el = document.getElementById(id);
+    const cols = (id === 'bodyAttMes' || id === 'bodyAnual') ? 4 : 3;
+    if (el) el.innerHTML = `<tr><td colspan="${cols}" class="gnh-empty">Consultando…</td></tr>`;
+  });
 
   try {
-    const res  = await fetch(`/api/getnet/historico?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+    const res  = await fetch(`/api/getnet/historico?${p}`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
-    if (!res.ok) { body.innerHTML = `<tr><td colspan="3" class="gnh-empty error">${data.error}</td></tr>`; return; }
+    if (!res.ok) {
+      ['bodyMes','bodyHora','bodyRecord','bodyAttMes','bodyConteo','bodyAnual'].forEach(id => {
+        const el = document.getElementById(id);
+        const cols = (id === 'bodyAttMes' || id === 'bodyAnual') ? 4 : 3;
+        if (el) el.innerHTML = `<tr><td colspan="${cols}" class="gnh-empty error">${data.error}</td></tr>`;
+      });
+      return;
+    }
 
-    // Renderizar checkboxes solo la primera vez (o si cambia filtro año/mes)
-    if (!gnAttLoaded && checks) {
-      _renderGnAttChecks(data.attendants, checks);
+    // Checkboxes (primera vez o tras cambio de año/mes)
+    if (!gnAttLoaded) {
+      const checks = document.getElementById('gnAttChecks');
+      if (checks) _renderGnAttChecks(data.attendants, checks);
       gnAttLoaded = true;
     }
 
-    gnHistRows = data.rows;
-    _renderGnHistTable();
+    gnHistData = data;
+    _renderAllGnTables();
   } catch {
-    body.innerHTML = `<tr><td colspan="3" class="gnh-empty error">Error de conexión.</td></tr>`;
+    ['bodyMes','bodyHora','bodyRecord','bodyAttMes','bodyConteo','bodyAnual'].forEach(id => {
+      const el = document.getElementById(id);
+      const cols = (id === 'bodyAttMes' || id === 'bodyAnual') ? 4 : 3;
+      if (el) el.innerHTML = `<tr><td colspan="${cols}" class="gnh-empty error">Error de conexión.</td></tr>`;
+    });
   }
 }
 
@@ -287,54 +307,137 @@ function _renderGnAttChecks(attendants, container) {
   ).join('');
 }
 
-function _renderGnHistTable() {
-  const body = document.getElementById('gnHistBody');
+/* ── Render genérico de tabla sortable con totales ── */
+function _renderGnTable(tblId, rows, colDefs, totChkId) {
+  const body = document.getElementById('body' + tblId.replace('tbl',''));
+  const foot = document.getElementById('foot' + tblId.replace('tbl',''));
   if (!body) return;
-  const { col, dir } = gnHistSort;
-  const sorted = [...gnHistRows].sort((a, b) => {
-    const va = a[col], vb = b[col];
-    if (col === 'mes') {
-      // orden cronológico usando year+month
-      const ka = a.year * 100 + a.month, kb = b.year * 100 + b.month;
-      return (ka - kb) * dir;
-    }
-    return (va - vb) * dir;
-  });
+  const { col, dir } = gnSorts[tblId];
+  const cols = colDefs.length;
 
-  if (!sorted.length) {
-    body.innerHTML = `<tr><td colspan="3" class="gnh-empty">Sin datos para los filtros seleccionados.</td></tr>`;
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="${cols}" class="gnh-empty">Sin datos para los filtros seleccionados.</td></tr>`;
+    if (foot) foot.hidden = true;
     return;
   }
 
-  body.innerHTML = sorted.map(r =>
-    `<tr>
-      <td class="gnh-td">${r.mes}</td>
-      <td class="gnh-td numeric">${r.operaciones.toLocaleString('es-CL')}</td>
-      <td class="gnh-td numeric">${clpFmt.format(r.monto)}</td>
-    </tr>`
-  ).join('');
+  // Ordenar
+  const sorted = [...rows].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (col === 'mes' || col === 'attendant' || col === 'categoria') {
+      const ka = col === 'mes' ? a.year * 100 + a.month : String(va);
+      const kb = col === 'mes' ? b.year * 100 + b.month : String(vb);
+      return ka < kb ? -dir : ka > kb ? dir : 0;
+    }
+    return ((va ?? 0) - (vb ?? 0)) * dir;
+  });
 
-  // Actualizar íconos de ordenamiento
-  document.querySelectorAll('#gnHistTable .gnh-th.sortable').forEach(th => {
-    const icon = th.querySelector('.sort-icon');
-    if (!icon) return;
-    if (th.dataset.col === col) icon.textContent = dir === 1 ? '↑' : '↓';
-    else icon.textContent = '↕';
+  body.innerHTML = sorted.map(r => `<tr>${colDefs.map(cd =>
+    `<td class="gnh-td${cd.numeric ? ' numeric' : ''}">${cd.fmt ? cd.fmt(r[cd.key], r) : r[cd.key]}</td>`
+  ).join('')}</tr>`).join('');
+
+  // Íconos sort
+  document.querySelectorAll(`#${tblId} .gnh-th.sortable`).forEach(th => {
+    const ic = th.querySelector('.sort-icon');
+    if (!ic) return;
+    ic.textContent = th.dataset.col === col ? (dir === 1 ? '↑' : '↓') : '↕';
     th.classList.toggle('sort-active', th.dataset.col === col);
   });
+
+  // Totales
+  if (!foot) return;
+  const showTot = totChkId ? document.getElementById(totChkId)?.checked : false;
+  foot.hidden = !showTot;
+  if (showTot) {
+    const numCols = colDefs.filter(cd => cd.numeric && cd.sumKey !== false);
+    const cells = colDefs.map((cd, i) => {
+      if (i === 0) return `<td class="gnh-td gnh-tot-label">Total (${rows.length})</td>`;
+      if (!cd.numeric || cd.sumKey === false) return `<td class="gnh-td"></td>`;
+      const s = rows.reduce((a, r) => a + (r[cd.key] || 0), 0);
+      return `<td class="gnh-td numeric">${cd.fmt ? cd.fmt(s) : s.toLocaleString('es-CL')}</td>`;
+    });
+    foot.innerHTML = `<tr class="gnh-foot-row">${cells.join('')}</tr>`;
+  }
 }
 
-// Click en headers de tabla para ordenar
-document.querySelectorAll('#gnHistTable .gnh-th.sortable').forEach(th =>
-  th.addEventListener('click', () => {
-    const c = th.dataset.col;
-    gnHistSort.dir = (gnHistSort.col === c) ? gnHistSort.dir * -1 : 1;
-    gnHistSort.col = c;
-    _renderGnHistTable();
-  })
-);
+function _renderAllGnTables() {
+  const d = gnHistData;
+  if (!d) return;
 
-// Todos / Ninguno attendants
+  // ① Resumen Mensual
+  _renderGnTable('tblMes', d.rows_mes || [], [
+    { key:'mes',        label:'Mes'         },
+    { key:'operaciones',label:'Operaciones', numeric:true, fmt: v => v.toLocaleString('es-CL') },
+    { key:'monto',      label:'Monto',       numeric:true, fmt: v => clpFmt.format(v) },
+  ], 'totMes');
+
+  // ② Operaciones por Hora
+  _renderGnTable('tblHora', d.rows_hora || [], [
+    { key:'hora',       label:'Hora',        fmt: v => `${String(v).padStart(2,'0')}:00` },
+    { key:'operaciones',label:'Operaciones', numeric:true, fmt: v => v.toLocaleString('es-CL') },
+    { key:'monto',      label:'Monto',       numeric:true, fmt: v => clpFmt.format(v) },
+  ], 'totHora');
+
+  // ③ Record Asistentes
+  _renderGnTable('tblRecord', d.rows_record || [], [
+    { key:'attendant',  label:'Asistente'   },
+    { key:'operaciones',label:'Operaciones', numeric:true, fmt: v => v.toLocaleString('es-CL') },
+    { key:'monto',      label:'Monto',       numeric:true, fmt: v => clpFmt.format(v) },
+  ], 'totRecord');
+
+  // ④ Asistente por Mes
+  _renderGnTable('tblAttMes', d.rows_att_mes || [], [
+    { key:'attendant',  label:'Asistente'   },
+    { key:'mes',        label:'Mes'         },
+    { key:'operaciones',label:'Operaciones', numeric:true, fmt: v => v.toLocaleString('es-CL') },
+    { key:'monto',      label:'Monto',       numeric:true, fmt: v => clpFmt.format(v) },
+  ], null);
+
+  // ⑤ Conteo Operaciones
+  _renderGnTable('tblConteo', d.rows_conteo || [], [
+    { key:'categoria',  label:'Forma de Pago' },
+    { key:'operaciones',label:'Operaciones', numeric:true, fmt: v => v.toLocaleString('es-CL') },
+    { key:'monto',      label:'Monto',       numeric:true, fmt: v => clpFmt.format(v) },
+  ], 'totConteo');
+
+  // ⑥ Total anual por asistente
+  _renderGnTable('tblAnual', d.rows_anual || [], [
+    { key:'attendant',  label:'Asistente'   },
+    { key:'year',       label:'Año',         numeric:true, fmt: v => String(v) },
+    { key:'operaciones',label:'Operaciones', numeric:true, fmt: v => v.toLocaleString('es-CL') },
+    { key:'monto',      label:'Monto',       numeric:true, fmt: v => clpFmt.format(v) },
+  ], 'totAnual');
+}
+
+/* ── Sort click (delegado en gnViewHistorico) ─────────────────── */
+document.getElementById('gnViewHistorico')?.addEventListener('click', e => {
+  const th = e.target.closest('.gnh-th.sortable');
+  if (!th) return;
+  const tbl = th.closest('table');
+  if (!tbl) return;
+  const tblId = tbl.id;
+  if (!gnSorts[tblId]) return;
+  const c = th.dataset.col;
+  gnSorts[tblId].dir = (gnSorts[tblId].col === c) ? gnSorts[tblId].dir * -1 : 1;
+  gnSorts[tblId].col = c;
+  _renderAllGnTables();
+});
+
+/* ── Totales toggle (delegado) ────────────────────────────────── */
+document.getElementById('gnViewHistorico')?.addEventListener('change', e => {
+  if (e.target.classList.contains('gnh-tot-chk')) _renderAllGnTables();
+});
+
+/* ── Accordion toggle ─────────────────────────────────────────── */
+document.getElementById('gnViewHistorico')?.addEventListener('click', e => {
+  const btn = e.target.closest('.gnh-acc-header');
+  if (!btn) return;
+  const acc = btn.closest('.gnh-acc');
+  if (!acc) return;
+  acc.dataset.open = acc.dataset.open === 'true' ? 'false' : 'true';
+});
+
+/* ── Todos / Ninguno attendants ───────────────────────────────── */
 document.getElementById('gnAttAll')?.addEventListener('click', () => {
   document.querySelectorAll('.gnh-att-check').forEach(c => c.checked = true);
   loadGnHistorico();
@@ -343,8 +446,6 @@ document.getElementById('gnAttNone')?.addEventListener('click', () => {
   document.querySelectorAll('.gnh-att-check').forEach(c => c.checked = false);
   loadGnHistorico();
 });
-
-// Re-filtrar al cambiar un checkbox individual
 document.getElementById('gnAttChecks')?.addEventListener('change', () => loadGnHistorico());
 
 document.querySelectorAll('.gn-subnav__btn').forEach(b =>
